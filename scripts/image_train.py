@@ -5,7 +5,7 @@ Train a diffusion model on images.
 import argparse
 
 from guided_diffusion import dist_util, logger
-from guided_diffusion.image_datasets import load_data
+from guided_diffusion.dataset import load_data
 from guided_diffusion.resample import create_named_schedule_sampler
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
@@ -22,7 +22,7 @@ def main():
     args.__dict__.update(load_parameters(args["cfg"]))
 
     dist_util.setup_dist()
-    logger.configure()
+    logger.configure(dir=args.output_dir)
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_model_and_diffusion(
@@ -34,6 +34,7 @@ def main():
     logger.log("creating data loader...")
     data = load_data(
         data_dir=args.data_dir,
+        dataset=args.dataset,
         batch_size=args.batch_size,
         image_size=args.image_size,
         class_cond=args.class_cond,
@@ -74,10 +75,12 @@ def create_argparser(configs=None):
         resume_checkpoint="",
         use_fp16=False,
         fp16_scale_growth=1e-3,
+        dataset="brats2020",
+        output_dir="./output"
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
-    parser.add_argument(f"--cfg", default="1")
+    parser.add_argument(f"--cfg", default="1", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 
