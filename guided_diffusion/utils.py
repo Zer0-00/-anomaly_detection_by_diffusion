@@ -5,35 +5,33 @@ import torch
 from torchvision import utils as vutils
 import numpy as np
 import csv
+import argparse
 
-def load_parameters(cfg:str, default_dict:dict) -> dict:
+def load_parameters(args:argparse.Namespace) -> dict:
     """
     loading configure json file.
     path of json file folder:./configs/
     """
 
-    if cfg.isnumeric():
-        para_name = 'configs{}.json'.format(cfg)
-    elif cfg.endswith('.json'):
-        para_name = cfg
+    if args.cfg.isnumeric():
+        para_name = 'configs{}.json'.format(args.cfg)
+    elif args.cfg.endswith('.json'):
+        para_name = args.cfg
     else:
-        para_name = cfg + ".json"
+        para_name = args.cfg + ".json"
     para_dir = os.path.join("./configs", para_name)
     cfgs_name = os.path.basename(para_dir)[:-5]
     print("configurations:"+cfgs_name)
     with open(para_dir, 'r') as f:
-        args_dict = json.load(f)
-
-    args = defaultdict(str)
-    args.update(args_dict)
+        load_args = json.load(f)
     
     #change type
-    for k in default_dict:
-        args[k] = type(default_dict[k])(args[k])
+    for k in load_args:
+        load_args[k] = type(args.__dict__[k])(load_args[k])
             
-    args["cfgs_name"] = cfgs_name
+    load_args["cfgs_name"] = cfgs_name
 
-    return args
+    return load_args
 
 
 

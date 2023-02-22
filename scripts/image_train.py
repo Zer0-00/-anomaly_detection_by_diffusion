@@ -3,6 +3,8 @@ Train a diffusion model on images.
 """
 
 import argparse
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 from guided_diffusion import dist_util, logger
 from guided_diffusion.dataset import load_data
@@ -19,7 +21,7 @@ from guided_diffusion.utils import load_parameters
 
 def main():
     args = create_argparser().parse_args()
-    args.__dict__.update(load_parameters(args["cfg"]))
+    args.__dict__.update(load_parameters(args))
 
     dist_util.setup_dist()
     logger.configure(dir=args.output_dir)

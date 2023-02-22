@@ -96,11 +96,13 @@ def create_model_and_diffusion(
     resblock_updown,
     use_fp16,
     use_new_attention_order,
+    in_channels
 ):
     model = create_model(
         image_size,
         num_channels,
         num_res_blocks,
+        in_channels=in_channels,
         channel_mult=channel_mult,
         learn_sigma=learn_sigma,
         class_cond=class_cond,

@@ -2,3 +2,6 @@
 __pycache__/
 classify_image_graph_def.pb
 .history
+*.log
+output
+guided_diffusion.egg-info

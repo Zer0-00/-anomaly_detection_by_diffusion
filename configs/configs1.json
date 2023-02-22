@@ -13,7 +13,7 @@
 
     "weight_decay": 0.05,
     "lr": 1e-4,
-    "batch_size": 8,
+    "batch_size": 1,
     "save_interval": 45000,
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
