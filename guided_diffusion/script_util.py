@@ -46,6 +46,7 @@ def model_and_diffusion_defaults():
     """
     res = dict(
         image_size=64,
+        in_channels=3,
         num_channels=128,
         num_res_blocks=2,
         num_heads=4,
@@ -132,6 +133,7 @@ def create_model(
     num_channels,
     num_res_blocks,
     channel_mult="",
+    in_channels=3,
     learn_sigma=False,
     class_cond=False,
     use_checkpoint=False,
@@ -165,9 +167,9 @@ def create_model(
 
     return UNetModel(
         image_size=image_size,
-        in_channels=3,
+        in_channels=in_channels,
         model_channels=num_channels,
-        out_channels=(3 if not learn_sigma else 6),
+        out_channels=(in_channels if not learn_sigma else in_channels*2),
         num_res_blocks=num_res_blocks,
         attention_resolutions=tuple(attention_ds),
         dropout=dropout,

@@ -14,10 +14,12 @@ from guided_diffusion.script_util import (
     add_dict_to_argparser,
 )
 from guided_diffusion.train_util import TrainLoop
+from guided_diffusion.utils import load_parameters
 
 
 def main():
     args = create_argparser().parse_args()
+    args.__dict__.update(load_parameters(args["cfg"]))
 
     dist_util.setup_dist()
     logger.configure()
@@ -57,7 +59,7 @@ def main():
     ).run_loop()
 
 
-def create_argparser():
+def create_argparser(configs=None):
     defaults = dict(
         data_dir="",
         schedule_sampler="uniform",
@@ -75,6 +77,7 @@ def create_argparser():
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
+    parser.add_argument(f"--cfg", default="1")
     add_dict_to_argparser(parser, defaults)
     return parser
 
