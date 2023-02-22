@@ -4,7 +4,7 @@ Train a diffusion model on images.
 
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from guided_diffusion import dist_util, logger
 from guided_diffusion.dataset import load_data
@@ -51,6 +51,7 @@ def main():
         microbatch=args.microbatch,
         lr=args.lr,
         ema_rate=args.ema_rate,
+        max_step=args.max_step,
         log_interval=args.log_interval,
         save_interval=args.save_interval,
         resume_checkpoint=args.resume_checkpoint,
@@ -74,6 +75,7 @@ def create_argparser(configs=None):
         ema_rate="0.9999",  # comma-separated list of EMA values
         log_interval=10,
         save_interval=10000,
+        max_step=500000,
         resume_checkpoint="",
         use_fp16=False,
         fp16_scale_growth=1e-3,

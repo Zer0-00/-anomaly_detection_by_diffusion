@@ -13,8 +13,10 @@
 
     "weight_decay": 0.05,
     "lr": 1e-4,
-    "batch_size": 1,
+    "batch_size": 16,
+    "microbatch": 8,
     "save_interval": 45000,
+    "max_step": 500000,
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "dataset": "brats2020"
