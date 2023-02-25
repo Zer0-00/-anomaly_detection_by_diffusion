@@ -6,7 +6,6 @@
     "num_head": 64,
     "channel_mult": "1,1,2,2,4,4",
     "classifier_attention_resolutions": "16",
-    "class_cond": "True",
 
     "diffusion_steps": 1000,
     "noise_schedule": "linear",

@@ -4,6 +4,7 @@ Train a noised image classifier on ImageNet.
 
 import argparse
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import blobfile as bf
 import torch as th
@@ -30,7 +31,7 @@ def main():
     args.__dict__.update(load_parameters(args))
     
     dist_util.setup_dist()
-    logger.configure()
+    logger.configure(dir=args.output_dir)
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_classifier_and_diffusion(
@@ -78,6 +79,7 @@ def main():
         image_size=args.image_size,
         class_cond=True,
         random_crop=True,
+        dataset=args.dataset
     )
     if args.val_data_dir:
         val_data = load_data(
@@ -85,6 +87,7 @@ def main():
             batch_size=args.batch_size,
             image_size=args.image_size,
             class_cond=True,
+            dataset=args.dataset
         )
     else:
         val_data = None
@@ -125,9 +128,9 @@ def main():
             losses[f"{prefix}_acc@1"] = compute_top_k(
                 logits, sub_labels, k=1, reduction="none"
             )
-            losses[f"{prefix}_acc@5"] = compute_top_k(
-                logits, sub_labels, k=5, reduction="none"
-            )
+            # losses[f"{prefix}_acc@5"] = compute_top_k(
+            #     logits, sub_labels, k=5, reduction="none"
+            # )
             log_loss_dict(diffusion, sub_t, losses)
             del losses
             loss = loss.mean()
@@ -217,10 +220,11 @@ def create_argparser():
         eval_interval=5,
         save_interval=10000,
         dataset="brats2020",
-        output_dir="./output"
+        output_dir="./output/classfier"
     )
     defaults.update(classifier_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
+    parser.add_argument(f"--cfg", default="classifier_1", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 

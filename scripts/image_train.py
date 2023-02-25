@@ -80,11 +80,11 @@ def create_argparser(configs=None):
         use_fp16=False,
         fp16_scale_growth=1e-3,
         dataset="brats2020",
-        output_dir="./output"
+        output_dir="./output/diffusion"
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
-    parser.add_argument(f"--cfg", default="1", type=str)
+    parser.add_argument(f"--cfg", default="image_1", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 
