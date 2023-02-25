@@ -33,7 +33,7 @@ class TrainLoop:
         log_interval,
         save_interval,
         resume_checkpoint,
-        max_step=500000,
+        iterations=500000,
         use_fp16=False,
         fp16_scale_growth=1e-3,
         schedule_sampler=None,
@@ -63,7 +63,7 @@ class TrainLoop:
         self.step = 0
         self.resume_step = 0
         self.global_batch = self.batch_size * dist.get_world_size()
-        self.max_step = max_step
+        self.iterations = iterations
 
         self.sync_cuda = th.cuda.is_available()
 
@@ -156,7 +156,7 @@ class TrainLoop:
         while (
             not self.lr_anneal_steps
             or self.step + self.resume_step < self.lr_anneal_steps
-            or self.step + self.resume_step < self.max_step
+            or self.step + self.resume_step < self.iterations
         ):
             batch, cond = next(self.data)
             self.run_step(batch, cond)

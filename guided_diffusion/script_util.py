@@ -37,6 +37,9 @@ def classifier_defaults():
         classifier_use_scale_shift_norm=True,  # False
         classifier_resblock_updown=True,  # False
         classifier_pool="attention",
+        in_channels=3,
+        channel_mult="1,1,2,2,4,4",
+        num_head=64
     )
 
 
@@ -96,7 +99,7 @@ def create_model_and_diffusion(
     resblock_updown,
     use_fp16,
     use_new_attention_order,
-    in_channels
+    in_channels=3
 ):
     model = create_model(
         image_size,
@@ -205,6 +208,9 @@ def create_classifier_and_diffusion(
     predict_xstart,
     rescale_timesteps,
     rescale_learned_sigmas,
+    in_channels=3,
+    channel_mult="1,1,2,2,4,4",
+    num_head=64
 ):
     classifier = create_classifier(
         image_size,
@@ -215,6 +221,9 @@ def create_classifier_and_diffusion(
         classifier_use_scale_shift_norm,
         classifier_resblock_updown,
         classifier_pool,
+        in_channels,
+        channel_mult=channel_mult,
+        num_head=num_head
     )
     diffusion = create_gaussian_diffusion(
         steps=diffusion_steps,
@@ -238,17 +247,23 @@ def create_classifier(
     classifier_use_scale_shift_norm,
     classifier_resblock_updown,
     classifier_pool,
+    in_channels=3,
+    channel_mult=None,
+    num_head=64
 ):
-    if image_size == 512:
-        channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
-    elif image_size == 256:
-        channel_mult = (1, 1, 2, 2, 4, 4)
-    elif image_size == 128:
-        channel_mult = (1, 1, 2, 3, 4)
-    elif image_size == 64:
-        channel_mult = (1, 2, 3, 4)
+    if channel_mult is None:
+        if image_size == 512:
+            channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
+        elif image_size == 256:
+            channel_mult = (1, 1, 2, 2, 4, 4)
+        elif image_size == 128:
+            channel_mult = (1, 1, 2, 3, 4)
+        elif image_size == 64:
+            channel_mult = (1, 2, 3, 4)
+        else:
+            raise ValueError(f"unsupported image size: {image_size}")
     else:
-        raise ValueError(f"unsupported image size: {image_size}")
+        channel_mult = tuple([int(num) for num in channel_mult.split(",")])
 
     attention_ds = []
     for res in classifier_attention_resolutions.split(","):
@@ -256,14 +271,14 @@ def create_classifier(
 
     return EncoderUNetModel(
         image_size=image_size,
-        in_channels=3,
+        in_channels=in_channels,
         model_channels=classifier_width,
-        out_channels=1000,
+        out_channels=NUM_CLASSES,
         num_res_blocks=classifier_depth,
         attention_resolutions=tuple(attention_ds),
         channel_mult=channel_mult,
         use_fp16=classifier_use_fp16,
-        num_head_channels=64,
+        num_head_channels=num_head,
         use_scale_shift_norm=classifier_use_scale_shift_norm,
         resblock_updown=classifier_resblock_updown,
         pool=classifier_pool,

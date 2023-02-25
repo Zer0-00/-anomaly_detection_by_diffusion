@@ -5,3 +5,4 @@ classify_image_graph_def.pb
 *.log
 output
 guided_diffusion.egg-info
+playground.py

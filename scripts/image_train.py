@@ -51,7 +51,7 @@ def main():
         microbatch=args.microbatch,
         lr=args.lr,
         ema_rate=args.ema_rate,
-        max_step=args.max_step,
+        iterations=args.iterations,
         log_interval=args.log_interval,
         save_interval=args.save_interval,
         resume_checkpoint=args.resume_checkpoint,
@@ -75,7 +75,7 @@ def create_argparser(configs=None):
         ema_rate="0.9999",  # comma-separated list of EMA values
         log_interval=10,
         save_interval=10000,
-        max_step=500000,
+        iterations=500000,
         resume_checkpoint="",
         use_fp16=False,
         fp16_scale_growth=1e-3,
