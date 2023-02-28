@@ -60,6 +60,7 @@ def main():
         schedule_sampler=schedule_sampler,
         weight_decay=args.weight_decay,
         lr_anneal_steps=args.lr_anneal_steps,
+        iterations=args.iterations,
     ).run_loop()
 
 
