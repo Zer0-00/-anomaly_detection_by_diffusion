@@ -220,7 +220,7 @@ def create_argparser():
         eval_interval=5,
         save_interval=10000,
         dataset="brats2020",
-        output_dir="./output/classfier"
+        output_dir="./output/classifier"
     )
     defaults.update(classifier_and_diffusion_defaults())
     parser = argparse.ArgumentParser()

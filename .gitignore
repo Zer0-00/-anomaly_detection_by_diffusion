@@ -6,3 +6,4 @@ classify_image_graph_def.pb
 output
 guided_diffusion.egg-info
 playground.py
+model
