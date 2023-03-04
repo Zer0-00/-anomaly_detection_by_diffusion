@@ -38,7 +38,7 @@ def classifier_defaults():
         classifier_resblock_updown=True,  # False
         classifier_pool="attention",
         in_channels=3,
-        channel_mult="1,1,2,2,4,4",
+        classifier_channel_mult="1,1,2,2,4,4",
         num_head=64
     )
 
@@ -209,7 +209,7 @@ def create_classifier_and_diffusion(
     rescale_timesteps,
     rescale_learned_sigmas,
     in_channels=3,
-    channel_mult="1,1,2,2,4,4",
+    classifier_channel_mult="1,1,2,2,4,4",
     num_head=64
 ):
     classifier = create_classifier(
@@ -222,7 +222,7 @@ def create_classifier_and_diffusion(
         classifier_resblock_updown,
         classifier_pool,
         in_channels,
-        channel_mult=channel_mult,
+        channel_mult=classifier_channel_mult,
         num_head=num_head
     )
     diffusion = create_gaussian_diffusion(
