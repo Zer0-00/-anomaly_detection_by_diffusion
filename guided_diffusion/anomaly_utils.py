@@ -1,7 +1,7 @@
 from .script_util import create_model
 from . import gaussian_diffusion as gd
 from .respace import space_timesteps
-from . import anomaly_diffusion_model
+from .anomaly_model import anomaly_diffusion_model
 
 def create_anomaly_model_and_diffusion(
     image_size,
@@ -75,7 +75,7 @@ def create_anomaly_gaussian_diffusion(
         loss_type = gd.LossType.MSE
     if not timestep_respacing:
         timestep_respacing = [steps]
-    return SpacedDiffusion(
+    return anomaly_diffusion_model(
         use_timesteps=space_timesteps(steps, timestep_respacing),
         betas=betas,
         model_mean_type=(
@@ -92,4 +92,5 @@ def create_anomaly_gaussian_diffusion(
         ),
         loss_type=loss_type,
         rescale_timesteps=rescale_timesteps,
+        max_t=max_t
     )
