@@ -8,18 +8,6 @@ class anomaly_diffusion_model(SpacedDiffusion):
         
         super().__init__(**kwargs)
     
-    
-    def generate_image_translator(
-        self, 
-        model, 
-        img,
-        t, 
-        use_ddim=False):
-        """
-        Gnerate a image translator that translate anomalous images to normal ones.
-        """
-        pass
-    
     def ddpm_anomaly_detection(
         self,
         model,

@@ -50,7 +50,19 @@ def create_anomaly_model_and_diffusion(
         use_new_attention_order=use_new_attention_order,
     )
     
-    diffusion = crea
+    diffusion = create_anomaly_gaussian_diffusion(
+        steps=diffusion_steps,
+        learn_sigma=learn_sigma,
+        noise_schedule=noise_schedule,
+        use_kl=use_kl,
+        predict_xstart=predict_xstart,
+        rescale_timesteps=rescale_timesteps,
+        rescale_learned_sigmas=rescale_learned_sigmas,
+        timestep_respacing=timestep_respacing,
+        max_t=max_t,
+    )
+    
+    return model, diffusion
 
 
 def create_anomaly_gaussian_diffusion(
