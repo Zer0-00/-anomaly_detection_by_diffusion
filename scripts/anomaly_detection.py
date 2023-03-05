@@ -11,7 +11,7 @@ import torch.distributed as dist
 import torch.nn.functional as F
 import time
 
-from guided_diffusion import dist_util, logger
+from guided_diffusion import dist_util, logger, utils
 from guided_diffusion.script_util import (
     NUM_CLASSES,
     model_and_diffusion_defaults,
@@ -25,14 +25,17 @@ from guided_diffusion.dataset import load_data
 
 def main():
     args = create_argparser().parse_args()
-
+    args.__dict__.update(utils.load_parameters(args))
+    
     dist_util.setup_dist()
     logger.configure(dir=args.output_dir)
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_anomaly_model_and_diffusion(
-        **args_to_dict(args, model_and_diffusion_defaults().keys())
+        **args_to_dict(args, model_and_diffusion_defaults().keys()),
+        max_t=args.max_t,
     )
+    print(args.model_path)
     model.load_state_dict(
         dist_util.load_state_dict(args.model_path, map_location="cpu")
     )
@@ -52,7 +55,7 @@ def main():
     classifier.eval()
 
     data = load_data(
-            data_dir=args.val_data_dir,
+            data_dir=args.data_dir,
             batch_size=args.batch_size,
             image_size=args.image_size,
             class_cond=True,
@@ -85,9 +88,10 @@ def main():
     start_time = time.time()
     for imgs, extra in data:
         model_kwargs = {}
-        classes = th.zeros(
-            size=(args.batch_size,), device=dist_util.dev()
-        )
+        # classes = th.randint(
+        #     low=0, high=1, size=(args.batch_size,), device=dist_util.dev()
+        # )
+        classes = th.zeros(size=(args.batch_size,), device=dist_util.dev(), dtype=th.int64)
         model_kwargs["y"] = classes
         img_batch = imgs.to(dist_util.dev())
         
@@ -132,17 +136,20 @@ def main():
 def create_argparser():
     defaults = dict(
         clip_denoised=True,
-        num_samples=10000,
         batch_size=16,
         use_ddim=False,
         model_path="",
         classifier_path="",
         classifier_scale=1.0,
-        output_dir="./output/anomaly_detection"
+        max_t=500,
+        output_dir="./output/anomaly_detection",
+        dataset="Brats2020",
+        data_dir = "/home/xuehong/Datasets/Brats_Processed_Split/val"
     )
     defaults.update(model_and_diffusion_defaults())
     defaults.update(classifier_defaults())
     parser = argparse.ArgumentParser()
+    parser.add_argument(f"--cfg", default="classifier_1", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 

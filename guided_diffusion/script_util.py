@@ -222,7 +222,7 @@ def create_classifier_and_diffusion(
         classifier_resblock_updown,
         classifier_pool,
         in_channels,
-        channel_mult=classifier_channel_mult,
+        classifier_channel_mult=classifier_channel_mult,
         num_head=num_head
     )
     diffusion = create_gaussian_diffusion(
@@ -248,9 +248,11 @@ def create_classifier(
     classifier_resblock_updown,
     classifier_pool,
     in_channels=3,
-    channel_mult=None,
+    classifier_channel_mult=None,
     num_head=64
 ):
+    channel_mult = classifier_channel_mult
+    
     if channel_mult is None:
         if image_size == 512:
             channel_mult = (0.5, 1, 1, 2, 2, 4, 4)

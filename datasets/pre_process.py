@@ -6,6 +6,7 @@ import os
 import csv
 from tqdm import tqdm
 import nibabel as nib
+from ..guided_diffusion.utils import create_folders
 
 class image_processor():
     """
@@ -143,11 +144,7 @@ def process_Brats2020(data_path, output_dir):
             save_method(seg_save_path, seg)
             
             global_counts += 1    
-        
-def create_folders(f_dir):
-    if not os.path.exists(f_dir):
-        os.makedirs(f_dir)       
-        
+
 
 if __name__ == "__main__":
     # data_path = '..'

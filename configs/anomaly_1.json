@@ -8,16 +8,14 @@
     "classifier_resblock_updown": "True", 
     "classifier_use_scale_shift_norm": "True",
     "classifier_scale": 1.0,
-    "classifier_path": "model/classifier.py",
+    "classifier_path": "model/configs1/classifier.pt",
 
     "diffusion_steps": 1000,
     "noise_schedule": "linear",
 
 
     "batch_size": 1,
-    "microbatch": -1,
 
-    "num_sample": 1,
     "timestep_respacing": "ddim1000",
     "use_ddim": "True",
     "max_t": 500,
@@ -28,9 +26,8 @@
     "num_head_channels": 64,
     "attention_resolutions": "16",
     "class_cond": "True",
-    "model_path": "models/ema_model.pt",
+    "model_path": "model/configs1/ema_model.pt",
 
     "dataset": "brats2020",
-    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",   
-    "val_data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val"
+    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val"
 }

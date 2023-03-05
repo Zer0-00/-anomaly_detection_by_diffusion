@@ -45,7 +45,8 @@ class anomaly_diffusion_model(SpacedDiffusion):
         if detection_fn is None:
             detection_fn = self.mse_map
         
-        img_noised = self.q_sample(x_start=img, t=self.max_t)
+        max_t = torch.tensor(self.max_t, device=device)
+        img_noised = self.q_sample(x_start=img, t=max_t)
         
         for sample in self.p_sample_loop_progressive(
             model,
@@ -107,7 +108,8 @@ class anomaly_diffusion_model(SpacedDiffusion):
         if detection_fn is None:
             detection_fn = self.mse_map
         
-        img_noised = self.q_sample(x_start=img, t=self.max_t)
+        max_t = torch.tensor(self.max_t, device=device)
+        img_noised = self.q_sample(x_start=img, t=max_t)
         
         for sample in self.ddim_sample_loop_progressive(
             model,
@@ -135,7 +137,7 @@ class anomaly_diffusion_model(SpacedDiffusion):
     def mse_map(self, image, target):
         return torch.sum((image - target)**2, dim=1)
     
-    def filter_timesteps(origin_steps, max_t):
+    def filter_timesteps(self, origin_steps, max_t):
         
         filtered_steps = {step for step in origin_steps if step <= max_t}
         return filtered_steps    
