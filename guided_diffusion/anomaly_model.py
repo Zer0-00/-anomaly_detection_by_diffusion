@@ -106,7 +106,7 @@ class anomaly_diffusion_model(SpacedDiffusion):
         return a non-differentiable batch of detection map.
         """
         if detection_fn is None:
-            detection_fn = self.mse_map
+            detection_fn = mse_map
         
         max_t = torch.tensor(self.max_t, device=device)
         img_noised = self.q_sample(x_start=img, t=max_t)
@@ -133,9 +133,6 @@ class anomaly_diffusion_model(SpacedDiffusion):
         }
         
         return output
-        
-    def mse_map(self, image, target):
-        return torch.sum((image - target)**2, dim=1)
     
     def filter_timesteps(self, origin_steps, max_t):
         
@@ -147,3 +144,6 @@ class anomaly_diffusion_model(SpacedDiffusion):
         Visualize results of anomaly detections
         """
         pass
+    
+def mse_map(image, target):
+    return torch.sum((image - target)**2, dim=1)
