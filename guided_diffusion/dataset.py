@@ -47,11 +47,11 @@ def load_data(
         while True:
             yield from loader
     elif limited_num <= 0:
-        for _ in range(len(dataset)):
             yield from loader
     else:
         for _ in range(limited_num):
-            yield from loader
+            data = next(loader)
+            yield data
 
 
 
