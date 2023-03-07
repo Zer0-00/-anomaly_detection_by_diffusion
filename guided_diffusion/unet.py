@@ -631,7 +631,7 @@ class UNetModel(nn.Module):
         self.middle_block.apply(convert_module_to_f32)
         self.output_blocks.apply(convert_module_to_f32)
 
-    def forward(self, x, timesteps, y=None):
+    def forward(self, x, timesteps, y=None, extra_emb=None):
         """
         Apply the model to an input batch.
 
@@ -651,6 +651,9 @@ class UNetModel(nn.Module):
             assert y.shape == (x.shape[0],)
             emb = emb + self.label_emb(y)
 
+        if extra_emb is not None:
+            emb += extra_emb
+        
         h = x.type(self.dtype)
         for module in self.input_blocks:
             h = module(h, emb)
