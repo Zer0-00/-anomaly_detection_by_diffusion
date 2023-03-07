@@ -9,7 +9,7 @@ import numpy as np
 import torch as th
 import torch.distributed as dist
 import torch.nn.functional as F
-import time
+import tqdm
 
 from guided_diffusion import dist_util, logger, utils
 from guided_diffusion.script_util import (
@@ -57,10 +57,9 @@ def main():
     data = load_data(
             data_dir=args.data_dir,
             batch_size=args.batch_size,
-            image_size=args.image_size,
-            class_cond=True,
             dataset=args.dataset,
-            deterministic=True
+            deterministic=True,
+            limited_num=-1
         )
     
     
@@ -85,8 +84,10 @@ def main():
         diffusion.ddpm_anomaly_detection if not args.use_ddim else diffusion.ddim_anomaly_detection
     )
     
-    start_time = time.time()
-    for imgs, extra in data:
+    start = th.cuda.Event(enable_timing=True)
+    end = th.cuda.Event(enable_timing=True)
+    
+    for imgs, extra in tqdm.tqdm(data):
         model_kwargs = {}
         # classes = th.randint(
         #     low=0, high=1, size=(args.batch_size,), device=dist_util.dev()
@@ -113,7 +114,10 @@ def main():
         all_images.extend([sample.cpu().numpy() for sample in gathered_samples])
     
     arr = np.concatenate(all_images, axis=0)
-    time_taken = time.time() - start_time
+    end.record()
+    th.cuda.synchronize()
+    th.cuda.current_stream().synchronize()
+    time_taken = start.elapsed_time(end)
     logger.log(f"Take {time_taken}s to test {len(arr)} samples")
     
     if dist.get_rank() == 0:

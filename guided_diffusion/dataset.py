@@ -9,13 +9,10 @@ def load_data(
     *,
     data_dir,
     batch_size,
-    image_size,
     dataset,
-    class_cond=False,
     deterministic=False,
-    random_crop=False,
-    random_flip=False,
-    test=False
+    test=False,
+    limited_num=None,
 ):
     """
     For a dataset, create a generator over (images, kwargs) pairs.
@@ -27,13 +24,9 @@ def load_data(
 
     :param data_dir: a dataset directory.
     :param batch_size: the batch size of each returned pair.
-    :param image_size: the size to which images are resized.
-    :param class_cond: if True, include a "y" key in returned dicts for class
-                       label. If classes are not available and this is true, an
-                       exception will be raised.
     :param deterministic: if True, yield results in a deterministic order.
-    :param random_crop: if True, randomly crop the images for augmentation.
-    :param random_flip: if True, randomly flip the images for augmentation.
+    :param test: if True, yield results from test set
+    :param limited_num: if None, yield unlimited number of samples, else yield limited_num * batch_size samples, if <= 0, yield len(Dataset) sanmples
     """
     
     if dataset.lower() == "brats2020":
@@ -50,8 +43,15 @@ def load_data(
         loader = DataLoader(
             dataset, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True
         )
-    while True:
-        yield from loader
+    if limited_num is None:
+        while True:
+            yield from loader
+    elif limited_num <= 0:
+        for _ in range(len(dataset)):
+            yield from loader
+    else:
+        for _ in range(limited_num):
+            yield from loader
 
 
 
