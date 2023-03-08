@@ -86,7 +86,7 @@ def main():
     
     start = th.cuda.Event(enable_timing=True)
     end = th.cuda.Event(enable_timing=True)
-    
+    start.record()
     for imgs, extra in tqdm.tqdm(data):
         model_kwargs = {}
         # classes = th.randint(
