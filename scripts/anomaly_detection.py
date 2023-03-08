@@ -64,10 +64,10 @@ def main():
     
     
     
-    def cond_fn(x, t, y=None):
+    def cond_fn(x, t, y=None,mask=None):
         assert y is not None
         with th.enable_grad():
-            x_in = x.detach().requires_grad_(True)
+            x_in = x.detach().requires_grad_(True)          
             logits = classifier(x_in, t)
             log_probs = F.log_softmax(logits, dim=-1)
             selected = log_probs[range(len(logits)), y.view(-1)]

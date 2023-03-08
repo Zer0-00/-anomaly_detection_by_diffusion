@@ -15,6 +15,10 @@ from guided_diffusion.script_util import (
     args_to_dict,
     add_dict_to_argparser,
 )
+from guided_diffusion.anomaly_utils import (
+    decoupled_diffusion_and_diffusion_defaults,
+    create_decoupled_model_and_diffusion,
+)
 from guided_diffusion.train_util import TrainLoop
 from guided_diffusion.utils import load_parameters
 
@@ -27,8 +31,8 @@ def main():
     logger.configure(dir=args.output_dir)
 
     logger.log("creating model and diffusion...")
-    model, diffusion = create_model_and_diffusion(
-        **args_to_dict(args, model_and_diffusion_defaults().keys())
+    model, diffusion = create_decoupled_model_and_diffusion(
+        **args_to_dict(args, decoupled_diffusion_and_diffusion_defaults().keys())
     )
     model.to(dist_util.dev())
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
@@ -83,7 +87,7 @@ def create_argparser(configs=None):
         dataset="brats2020",
         output_dir="./output/diffusion"
     )
-    defaults.update(model_and_diffusion_defaults())
+    defaults.update(decoupled_diffusion_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
     parser.add_argument(f"--cfg", default="image_1", type=str)
     add_dict_to_argparser(parser, defaults)

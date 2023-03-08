@@ -1,7 +1,11 @@
 from .respace import SpacedDiffusion
 import torch
+from .unet import EncoderUNetModel, UNetModel
 
-class anomaly_diffusion_model(SpacedDiffusion):
+def mse_map(image, target):
+    return torch.sum((image - target)**2, dim=1)
+
+class AnomalyDiffusion(SpacedDiffusion):
     def __init__(self, max_t, **kwargs):
         self.max_t = max_t
         kwargs["use_timesteps"] = self.filter_timesteps(kwargs["use_timesteps"], self.max_t)
@@ -145,5 +149,86 @@ class anomaly_diffusion_model(SpacedDiffusion):
         """
         pass
     
-def mse_map(image, target):
-    return torch.sum((image - target)**2, dim=1)
+class DecoupledDiffusionModel(torch.nn.Module):
+    def __init__(
+        self,
+        image_size,
+        in_channels,
+        model_channels,
+        out_channels,
+        num_res_blocks,
+        attention_resolutions,
+        encoder_model_channels,
+        encoder_num_res_blocks,
+        encoder_attention_resolutions,
+        dropout=0,
+        channel_mult=(1, 2, 4, 8),
+        use_checkpoint=False,
+        use_fp16=False,
+        num_heads=1,
+        num_head_channels=-1,
+        num_heads_upsample=-1,
+        use_scale_shift_norm=False,
+        resblock_updown=False,
+        use_new_attention_order=False,
+        encoder_channel_mult=(1, 2, 4, 8),
+        encoder_num_head_channels=-1,
+        encoder_use_scale_shift_norm=False,
+        encoder_resblock_updown=False,
+        pool='adaptive',
+    ):
+        super().__init__()
+        
+        if num_heads_upsample == -1:
+            num_heads_upsample = num_heads
+            
+        time_embed_dim = model_channels * 4
+        
+        #save model parameters
+        self.image_size = image_size
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.dropout = dropout
+        self.emb_dim = time_embed_dim
+        self.dtype = torch.float16 if use_fp16 else torch.float32
+
+        self.encoder = EncoderUNetModel(
+            image_size=self.image_size,
+            in_channels=self.in_channels,
+            model_channels=encoder_model_channels,
+            out_channels=self.emb_dim,
+            num_res_blocks=encoder_num_res_blocks,
+            attention_resolutions=encoder_attention_resolutions,
+            channel_mult=encoder_channel_mult,
+            use_fp16=use_fp16,
+            num_head_channels=encoder_num_head_channels,
+            use_scale_shift_norm=encoder_use_scale_shift_norm,
+            resblock_updown=encoder_resblock_updown,
+            pool=pool
+        )
+        
+        self.denoised = UNetModel(
+            image_size=self.image_size,
+            in_channels=self.in_channels,
+            model_channels=model_channels,
+            out_channels=self.out_channels,
+            num_res_blocks=num_res_blocks,
+            attention_resolutions=attention_resolutions,
+            dropout=self.dropout,
+            channel_mult=channel_mult,
+            use_checkpoint=use_checkpoint,
+            use_fp16=use_fp16,
+            num_heads=num_heads,
+            num_head_channels=num_head_channels,
+            num_heads_upsample=num_heads_upsample,
+            use_scale_shift_norm=use_scale_shift_norm,
+            resblock_updown=resblock_updown,
+            use_new_attention_order=use_new_attention_order,
+        )
+        
+    def forward(self, x, timesteps):
+        extra_emb = self.encoder(x, timesteps)
+        generated_noise = self.denoised(x, timesteps, extra_emb=extra_emb)
+        
+        return generated_noise
+    
