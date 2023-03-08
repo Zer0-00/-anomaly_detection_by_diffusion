@@ -1,0 +1,13 @@
+{
+    "weight_decay": 0.05,
+    "lr": 1e-4,
+    "batch_size": 16,
+    "microbatch": 8,
+    "log_interval": 1000,
+    "save_interval": 25000,
+    "iterations": 300000,
+    "output_dir":"./output/configs2/diffusion",
+
+    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
+    "dataset": "brats2020"
+}
