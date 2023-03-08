@@ -21,7 +21,7 @@ from guided_diffusion.script_util import (
     args_to_dict,
 )
 from guided_diffusion.anomaly_utils import create_anomaly_model_and_diffusion
-from guided_diffusion.dataset import load_data
+from datasets.dataset import load_data
 
 def main():
     args = create_argparser().parse_args()
