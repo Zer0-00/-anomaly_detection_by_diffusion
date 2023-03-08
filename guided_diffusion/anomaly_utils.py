@@ -89,7 +89,7 @@ def create_decoupled_model_and_diffusion(
     encoder_use_scale_shift_norm=False,
     encoder_resblock_updown=False,
     pool='adaptive',
-    steps=1000,
+    diffusion_steps=1000,
     learn_sigma=False,
     sigma_small=False,
     noise_schedule="linear",
@@ -101,7 +101,7 @@ def create_decoupled_model_and_diffusion(
     max_t=500,  
 ):
     diffusion = create_anomaly_gaussian_diffusion(
-    steps=steps,
+    steps=diffusion_steps,
     learn_sigma=learn_sigma,
     sigma_small=sigma_small,
     noise_schedule=noise_schedule,
@@ -230,7 +230,7 @@ def create_decoupled_model(
     
     encoder_channel_mult = encoder_channel_mult
     
-    if encoder_channel_mult is None:
+    if encoder_channel_mult == "":
         if image_size == 512:
             encoder_channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
         elif image_size == 256:
@@ -242,7 +242,7 @@ def create_decoupled_model(
         else:
             raise ValueError(f"unsupported image size: {image_size}")
     else:
-        encoder_channel_mult = tuple([int(num) for num in channel_mult.split(",")])
+        encoder_channel_mult = tuple([int(num) for num in encoder_channel_mult.split(",")])
 
     encoder_attention_ds = []
     for res in encoder_attention_resolutions.split(","):
@@ -284,7 +284,7 @@ def decoupled_diffusion_defaults():
     image_size=256,
     in_channels=4,
     model_channels=128,
-    out_channels=4,
+    learn_sigma=False,
     num_res_blocks=2,
     attention_resolutions="16",
     encoder_model_channels=32,
@@ -324,7 +324,7 @@ def anomaly_diffusion_defaults():
     return defaults
 
 def decoupled_diffusion_and_diffusion_defaults():
-    defaults = decoupled_diffusion_defaults(),
+    defaults = decoupled_diffusion_defaults()
     defaults.update(anomaly_diffusion_defaults())
     return defaults
     

@@ -7,7 +7,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from guided_diffusion import dist_util, logger
-from guided_diffusion.dataset import load_data
+from datasets.dataset import load_data
 from guided_diffusion.resample import create_named_schedule_sampler
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
@@ -42,8 +42,7 @@ def main():
         data_dir=args.data_dir,
         dataset=args.dataset,
         batch_size=args.batch_size,
-        image_size=args.image_size,
-        class_cond=args.class_cond,
+        class_labels=False
     )
 
     logger.log("training...")
@@ -64,7 +63,6 @@ def main():
         schedule_sampler=schedule_sampler,
         weight_decay=args.weight_decay,
         lr_anneal_steps=args.lr_anneal_steps,
-        iterations=args.iterations,
     ).run_loop()
 
 
