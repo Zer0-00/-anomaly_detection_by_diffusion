@@ -7,7 +7,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from guided_diffusion import dist_util, logger
-from datasets.dataset import load_data
+from ..datasets.dataset import load_data
 from guided_diffusion.resample import create_named_schedule_sampler
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
