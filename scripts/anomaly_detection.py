@@ -5,6 +5,8 @@ anomaly detection with guided diffusion
 import argparse
 import os
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import numpy as np
 import torch as th
 import torch.distributed as dist
@@ -59,7 +61,8 @@ def main():
             batch_size=args.batch_size,
             dataset=args.dataset,
             deterministic=True,
-            limited_num=-1
+            limited_num=-1,
+            test=True,
         )
     
     
@@ -122,15 +125,15 @@ def main():
     
     if dist.get_rank() == 0:
         logger.log(f"saving to {logger.get_dir()}")
-        for idx, img, extra in enumerate(data):
+        for idx, (img, extra) in enumerate(data):
             
-            seg = float2uint(extra["seg"]).squeeze().numpy()
-            img = float2uint(img).squeeze.numpy()
-            generated = arr[idx]
+            seg = float2uint(extra["seg"]).numpy()
+            img = float2uint(img).numpy()
+            generated = arr[idx][None,...]
             
-            save_arr = np.concatenate([img,seg,generated],axis=0)
+            save_arr = np.concatenate([img,seg,generated],axis=3)
             
-            out_path = os.path.join(logger.get_dir(), f"samples_{idx}.npy")
+            out_path = os.path.join(logger.get_dir(), f"samples_{idx}.npz")
             np.savez(out_path, save_arr)
 
     dist.barrier()
