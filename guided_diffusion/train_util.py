@@ -279,9 +279,24 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
         weight_decay=0,
         lr_anneal_steps=0,
     ):
-        super().__init__(model, diffusion, data, batch_size, microbatch, lr, ema_rate, 
-                         log_interval, save_interval, resume_checkpoint, iterations,use_fp16, 
-                         fp16_scale_growth, schedule_sampler, weight_decay, lr_anneal_steps)
+        super().__init__(
+            model=model,
+            diffusion=diffusion,
+            data=data,
+            batch_size=batch_size, 
+            microbatch=microbatch, 
+            lr=lr, 
+            ema_rate=ema_rate, 
+            log_interval=log_interval, 
+            save_interval=save_interval, 
+            resume_checkpoint=resume_checkpoint,
+            iterations=iterations,
+            use_fp16=use_fp16, 
+            fp16_scale_growth=fp16_scale_growth, 
+            schedule_sampler=schedule_sampler, 
+            weight_decay=weight_decay,
+            lr_anneal_steps=lr_anneal_steps,
+        )
         self.semantic_encoder = semantic_encoder
         self.opt = AdamW(
             filter(lambda x: x.requires_grad, self.mp_trainer.master_params), lr=self.lr, weight_decay=self.weight_decay
@@ -297,7 +312,7 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
             }
             last_batch = (i + self.microbatch) >= batch.shape[0]
             t, weights = self.schedule_sampler.sample(micro.shape[0], dist_util.dev())
-            micro_emb = self.semantic_encoder(micro)
+            micro_emb = self.semantic_encoder(micro, th.zeros_like(t, device=dist_util.dev()))
             micro_cond["extra_emb"] = micro_emb
 
             compute_losses = functools.partial(

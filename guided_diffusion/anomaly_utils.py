@@ -417,6 +417,6 @@ def decoupled_diffusion_and_diffusion_defaults():
     return defaults
     
 def anomaly_diffusion_and_model_defaults():
-    defaults = anomaly_diffusion_defaults
+    defaults = anomaly_diffusion_defaults()
     defaults.update(model_defaults())
     return defaults

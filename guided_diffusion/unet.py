@@ -467,15 +467,15 @@ class UNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
 
-        time_embed_dim = model_channels * 4
+        self.embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
-            linear(model_channels, time_embed_dim),
+            linear(model_channels, self.embed_dim),
             nn.SiLU(),
-            linear(time_embed_dim, time_embed_dim),
+            linear(self.embed_dim, self.embed_dim),
         )
 
         if self.num_classes is not None:
-            self.label_emb = nn.Embedding(num_classes, time_embed_dim)
+            self.label_emb = nn.Embedding(num_classes, self.embed_dim)
 
         ch = input_ch = int(channel_mult[0] * model_channels)
         self.input_blocks = nn.ModuleList(
@@ -489,7 +489,7 @@ class UNetModel(nn.Module):
                 layers = [
                     ResBlock(
                         ch,
-                        time_embed_dim,
+                        self.embed_dim,
                         dropout,
                         out_channels=int(mult * model_channels),
                         dims=dims,
@@ -517,7 +517,7 @@ class UNetModel(nn.Module):
                     TimestepEmbedSequential(
                         ResBlock(
                             ch,
-                            time_embed_dim,
+                            self.embed_dim,
                             dropout,
                             out_channels=out_ch,
                             dims=dims,
@@ -539,7 +539,7 @@ class UNetModel(nn.Module):
         self.middle_block = TimestepEmbedSequential(
             ResBlock(
                 ch,
-                time_embed_dim,
+                self.embed_dim,
                 dropout,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
@@ -554,7 +554,7 @@ class UNetModel(nn.Module):
             ),
             ResBlock(
                 ch,
-                time_embed_dim,
+                self.embed_dim,
                 dropout,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
@@ -570,7 +570,7 @@ class UNetModel(nn.Module):
                 layers = [
                     ResBlock(
                         ch + ich,
-                        time_embed_dim,
+                        self.embed_dim,
                         dropout,
                         out_channels=int(model_channels * mult),
                         dims=dims,
@@ -594,7 +594,7 @@ class UNetModel(nn.Module):
                     layers.append(
                         ResBlock(
                             ch,
-                            time_embed_dim,
+                            self.embed_dim,
                             dropout,
                             out_channels=out_ch,
                             dims=dims,

@@ -39,19 +39,23 @@ def main():
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
     
     semantic_encoder = create_semantic_encoder(
-        **args_to_dict(args, semantic_encoder_defaults().keys)
+        **args_to_dict(args, semantic_encoder_defaults().keys()),
+        emb_dim=model.embed_dim
     )
-    
-    #load weights from a pretrained classifier except the last layer
-    state_dict =  dist_util.load_state_dict(args.encoder_path, map_location='cpu')
-    for k in state_dict:
-        if k.startswith('pool'):
-            state_dict.pop(k)
-    
-    semantic_encoder.load_state_dict(state_dict,strict=False)
-    for name, param in semantic_encoder.named_parameters():
-        if 'pool' not in name:
-            param.requires_grad = False
+    if args.encoder_path is not "":
+        #load weights from a pretrained classifier except the last layer
+        state_dict =  dist_util.load_state_dict(args.encoder_path, map_location='cpu')
+
+        for k in list(state_dict):
+            if k.startswith('out'):
+                state_dict.pop(k)
+
+        semantic_encoder.load_state_dict(state_dict,strict=False)
+        for name, param in semantic_encoder.named_parameters():
+            if 'pool' not in name:
+                param.requires_grad = False
+    semantic_encoder.to(dist_util.dev())
+
 
     logger.log("creating data loader...")
     data = load_data(
@@ -86,7 +90,7 @@ def main():
 def create_argparser(configs=None):
     defaults = dict(
         data_dir="",
-        encoder_path="./model/classifier.pt",
+        encoder_path="",
         schedule_sampler="uniform",
         lr=1e-4,
         weight_decay=0.0,
@@ -101,10 +105,10 @@ def create_argparser(configs=None):
         use_fp16=False,
         fp16_scale_growth=1e-3,
         dataset="brats2020",
-        output_dir="./output/diffusion"
+        output_dir="./output/"
     )
-    defaults.update(anomaly_diffusion_and_model_defaults)
-    defaults.update(semantic_encoder_defaults)
+    defaults.update(anomaly_diffusion_and_model_defaults())
+    defaults.update(semantic_encoder_defaults())
     parser = argparse.ArgumentParser()
     parser.add_argument(f"--cfg", default="image_1", type=str)
     add_dict_to_argparser(parser, defaults)
