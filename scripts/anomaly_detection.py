@@ -133,8 +133,8 @@ def main():
             
             save_arr = np.concatenate([img,seg,generated],axis=3)
             
-            out_path = os.path.join(logger.get_dir(), f"samples_{idx}.npz")
-            np.savez(out_path, save_arr)
+            out_path = os.path.join(logger.get_dir(), f"samples_{idx}.npy")
+            np.save(out_path, save_arr)
 
     dist.barrier()
     logger.log("anomaly detection complete")
