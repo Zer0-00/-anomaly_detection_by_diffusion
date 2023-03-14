@@ -232,3 +232,6 @@ class DecoupledDiffusionModel(torch.nn.Module):
         
         return generated_noise
     
+    def get_embbed(self, x, timesteps):
+        return self.encoder(x, timesteps)
+    

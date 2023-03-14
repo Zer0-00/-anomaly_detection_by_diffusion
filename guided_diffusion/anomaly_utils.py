@@ -2,6 +2,7 @@ from .script_util import create_model,diffusion_defaults
 from . import gaussian_diffusion as gd
 from .respace import space_timesteps
 from .anomaly_model import AnomalyDiffusion,DecoupledDiffusionModel
+from .unet import EncoderUNetModel
 
 def create_anomaly_model_and_diffusion(
     image_size,
@@ -275,6 +276,56 @@ def create_decoupled_model(
         pool=pool,
     )
     
+def create_semantic_encoder(
+    image_size,
+    emb_dim,
+    encoder_use_fp16,
+    encoder_width,
+    encoder_depth,
+    encoder_attention_resolutions,
+    encoder_use_scale_shift_norm,
+    encoder_resblock_updown,
+    encoder_pool,
+    in_channels=3,
+    encoder_channel_mult=None,
+    num_head=64,
+):
+    channel_mult = encoder_channel_mult
+    
+    if channel_mult is None:
+        if image_size == 512:
+            channel_mult = (0.5, 1, 1, 2, 2, 4, 4)
+        elif image_size == 256:
+            channel_mult = (1, 1, 2, 2, 4, 4)
+        elif image_size == 128:
+            channel_mult = (1, 1, 2, 3, 4)
+        elif image_size == 64:
+            channel_mult = (1, 2, 3, 4)
+        else:
+            raise ValueError(f"unsupported image size: {image_size}")
+    else:
+        channel_mult = tuple([int(num) for num in channel_mult.split(",")])
+
+    attention_ds = []
+    for res in encoder_attention_resolutions.split(","):
+        attention_ds.append(image_size // int(res))
+
+    return EncoderUNetModel(
+        image_size=image_size,
+        in_channels=in_channels,
+        model_channels=encoder_width,
+        out_channels=emb_dim,
+        num_res_blocks=encoder_depth,
+        attention_resolutions=tuple(attention_ds),
+        channel_mult=channel_mult,
+        use_fp16=encoder_use_fp16,
+        num_head_channels=num_head,
+        use_scale_shift_norm=encoder_use_scale_shift_norm,
+        resblock_updown=encoder_resblock_updown,
+        pool=encoder_pool,
+    )
+    
+    
 def decoupled_diffusion_defaults():
     """
     defaults of decoupled diffusion for Brats.
@@ -323,8 +374,49 @@ def anomaly_diffusion_defaults():
     )
     return defaults
 
+def model_defaults():
+    defaults = dict(
+        image_size=64,
+        in_channels=3,
+        num_channels=128,
+        num_res_blocks=2,
+        num_heads=4,
+        num_heads_upsample=-1,
+        num_head_channels=-1,
+        attention_resolutions="16,8",
+        channel_mult="",
+        dropout=0.0,
+        class_cond=False,
+        use_checkpoint=False,
+        use_scale_shift_norm=True,
+        resblock_updown=False,
+        use_fp16=False,
+        use_new_attention_order=False,
+    )
+    return defaults
+
+def semantic_encoder_defaults():
+    defaults = dict(
+        image_size=64,
+        encoder_use_fp16=False,
+        encoder_width=128,
+        encoder_depth=2,
+        encoder_attention_resolutions="32,16,8",  # 16
+        encoder_use_scale_shift_norm=True,  # False
+        encoder_resblock_updown=True,  # False
+        encoder_pool="attention",
+        in_channels=3,
+        encoder_channel_mult="1,1,2,2,4,4",
+        num_head=64
+    )
+    return defaults
+
 def decoupled_diffusion_and_diffusion_defaults():
     defaults = decoupled_diffusion_defaults()
     defaults.update(anomaly_diffusion_defaults())
     return defaults
     
+def anomaly_diffusion_and_model_defaults():
+    defaults = anomaly_diffusion_defaults
+    defaults.update(model_defaults())
+    return defaults

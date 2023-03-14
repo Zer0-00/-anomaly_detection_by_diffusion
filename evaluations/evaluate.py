@@ -47,6 +47,7 @@ def evaluate_training(progress_dir, save_dir):
     plt.savefig(save_dir, dpi=600)
     plt.close()
     
+    
 if __name__ == '__main__':
     progress_dir = "output/classfier/progress.csv"
     output_dir = "output/classfier/progress.png"

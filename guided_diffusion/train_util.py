@@ -257,6 +257,74 @@ class TrainLoop:
 
         dist.barrier()
 
+class DecoupledDiffusionTrainLoop(TrainLoop):
+    def __init__(
+        self,
+        *, 
+        model,
+        diffusion,
+        semantic_encoder,
+        data,
+        batch_size,
+        microbatch,
+        lr,
+        ema_rate,
+        log_interval,
+        save_interval, 
+        resume_checkpoint,
+        iterations=500000,
+        use_fp16=False, 
+        fp16_scale_growth=0.001, 
+        schedule_sampler=None, 
+        weight_decay=0,
+        lr_anneal_steps=0,
+    ):
+        super().__init__(model, diffusion, data, batch_size, microbatch, lr, ema_rate, 
+                         log_interval, save_interval, resume_checkpoint, iterations,use_fp16, 
+                         fp16_scale_growth, schedule_sampler, weight_decay, lr_anneal_steps)
+        self.semantic_encoder = semantic_encoder
+        self.opt = AdamW(
+            filter(lambda x: x.requires_grad, self.mp_trainer.master_params), lr=self.lr, weight_decay=self.weight_decay
+        )
+        
+    def forward_backward(self, batch, cond):
+        self.mp_trainer.zero_grad()
+        for i in range(0, batch.shape[0], self.microbatch):
+            micro = batch[i : i + self.microbatch].to(dist_util.dev())
+            micro_cond = {
+                k: v[i : i + self.microbatch].to(dist_util.dev())
+                for k, v in cond.items()
+            }
+            last_batch = (i + self.microbatch) >= batch.shape[0]
+            t, weights = self.schedule_sampler.sample(micro.shape[0], dist_util.dev())
+            micro_emb = self.semantic_encoder(micro)
+            micro_cond["extra_emb"] = micro_emb
+
+            compute_losses = functools.partial(
+                self.diffusion.training_losses,
+                self.ddp_model,
+                micro,
+                t,
+                model_kwargs=micro_cond,
+            )
+
+            if last_batch or not self.use_ddp:
+                losses = compute_losses()
+            else:
+                with self.ddp_model.no_sync():
+                    losses = compute_losses()
+
+            if isinstance(self.schedule_sampler, LossAwareSampler):
+                self.schedule_sampler.update_with_local_losses(
+                    t, losses["loss"].detach()
+                )
+
+            loss = (losses["loss"] * weights).mean()
+            log_loss_dict(
+                self.diffusion, t, {k: v * weights for k, v in losses.items()}
+            )
+            self.mp_trainer.backward(loss)
+        
 
 def parse_resume_step_from_filename(filename):
     """
