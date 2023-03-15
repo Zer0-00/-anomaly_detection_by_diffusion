@@ -31,21 +31,22 @@ def dice_coeff(
     dice = dice / images.shape[0]
     return dice
 
-def dice_specific(
+def region_specific_metrics(
     targets:Union[torch.Tensor,np.ndarray], 
     images:Union[torch.Tensor,np.ndarray], 
-    epsilon=1e-6,
-    region_type='WT'
+    func,
+    region_type='WT',
+    **func_kwargs
 ):
     assert region_type in ["ET", "TC", "WT"], "region type should be one of ET, TC, WT"
     if region_type == 'ET':
         masks = (targets == 1) * 1
     elif region_type == "TC":
-        masks = ((targets == 1) + (targets == 4)) > 0 * 1
+        masks = (((targets == 1) + (targets == 4)) > 0) * 1
     else:
-        masks = ((targets == 1) + (targets == 2) + (targets == 4)) > 0 * 1
+        masks = (((targets == 1) + (targets == 2) + (targets == 4))) > 0 * 1
         
-    return dice_coeff(masks, images, epsilon=epsilon)
+    return func(masks, images, **func_kwargs)
 
 def AUROC(
     targets:Union[torch.Tensor,np.ndarray], 
@@ -60,13 +61,14 @@ def AUROC(
     """
     assert images.shape == targets.shape and type(images) == type(targets),\
          "the input and target images should share the same shape and type"
+         
+    
     if isinstance(images, torch.Tensor):     
         targets = targets.detach().cpu().to(torch.uint8).numpy().flatten().squeeze()
         images = images.detach().cpu().numpy().flatten().squeeze()
     else:
         targets = targets.flatten().squeeze()
         images = images.flatten().squeeze()
-        
     try: 
         score = roc_auc_score(targets, images)
     except ValueError:
@@ -79,9 +81,11 @@ class Brats_Evaluator():
         self,
         data_folder,
         metrics,
+        threshold,
     ):
         self.data_folder = data_folder
         self.metrics = metrics
+        self.threshold = threshold
         
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
@@ -95,25 +99,29 @@ class Brats_Evaluator():
                 file_dir = os.path.join(self.data_folder, file_name)
                 data = np.load(file_dir)
                 
-                img = data[0,:,:,:4]
+                img = data[0,:,:,:4]*1.0
                 seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
-                generated = data[0,:,:,5:]
+                generated = data[0,:,:,5:]*1.0
                 pred = np.expand_dims(np.sum((generated-img)**2, axis=2), axis=(0,1))
+                pred = (pred - pred.min())/(pred.max()-pred.min())
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
                 writer.writerow(metrics_img)
                 
-def evaluate_Brat(data_folder, output_dir):
+def evaluate_Brat(data_folder, output_dir, threshold=700):
     metrics = {
-        "DICE_ET": partial(dice_specific, region_type="ET"),
-        "DICE_TC": partial(dice_specific, region_type="TC"),
-        "DICE_WT": partial(dice_specific, region_type="WT"),
-        "AUROC": AUROC
+        "DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
+        "DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT"),
+        "AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
+        "AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
+        "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
     }
     
     evaluator = Brats_Evaluator(
         data_folder=data_folder,
-        metrics=metrics
+        metrics=metrics,
+        threshold=threshold,
     )
     
     evaluator.evaluate(output_dir)

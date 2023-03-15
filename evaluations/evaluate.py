@@ -47,8 +47,29 @@ def evaluate_training(progress_dir, save_dir):
     plt.savefig(save_dir, dpi=600)
     plt.close()
     
+def evaluate_image(image_path, save_dir):
+    data = np.load(image_path)
+                
+    img = data[0,:,:,:4]*1.0
+    seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
+    generated = data[0,:,:,5:]*1.0
+    pred = np.expand_dims(np.sum((generated-img)**2, axis=2), axis=(0,1))
+    #pred = (pred - pred.min())/(pred.max()-pred.min())
+    
+    plt.subplot(2,2,1)
+    plt.imshow(img[:,:,0].squeeze(),cmap='gray')
+    plt.subplot(2,2,2)
+    plt.imshow((seg > 0 * 1.0).squeeze(),cmap='gray')
+    plt.subplot(2,2,3)
+    plt.imshow(generated[:,:,0].squeeze(), cmap='gray')
+    plt.subplot(2,2,4)
+    plt.imshow(pred.squeeze(), cmap='gray')
+    plt.savefig(save_dir)
+    plt.close
     
 if __name__ == '__main__':
-    progress_dir = "output/classfier/progress.csv"
-    output_dir = "output/classfier/progress.png"
-    evaluate_training(progress_dir,output_dir)
+    # progress_dir = "output/classfier/progress.csv"
+    # output_dir = "output/classfier/progress.png"
+    # evaluate_training(progress_dir,output_dir)
+    
+    evaluate_image("output/anomaly_detection/samples_0.npy", "output/anomaly_detection/samples_0.png")

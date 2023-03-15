@@ -107,10 +107,7 @@ def main():
             cond_fn=cond_fn,
             device=dist_util.dev(),
         )["generated_image"]
-        
-        sample = ((sample + 1) * 127.5).clamp(0, 255).to(th.uint8)
-        sample = sample.permute(0, 2, 3, 1)
-        sample = sample.contiguous()
+        sample = float2uint(sample)
         
         seg = float2uint(extra["seg"], rescale=False).to(dist_util.dev())
         img_batch = float2uint(img_batch, rescale=True)
@@ -163,7 +160,7 @@ def create_argparser():
 
 def float2uint(input:th.Tensor, rescale=True):
     if rescale:
-        input = (input * 255).clamp(0, 255).to(th.uint8)
+        input = ((input + 1) * 127.5).clamp(0, 255).to(th.uint8)
     else:
         input = input.clamp(0, 255).to(th.uint8)   
     input = input.permute(0, 2, 3, 1)
