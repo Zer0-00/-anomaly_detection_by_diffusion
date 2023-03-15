@@ -111,10 +111,15 @@ def main():
         sample = ((sample + 1) * 127.5).clamp(0, 255).to(th.uint8)
         sample = sample.permute(0, 2, 3, 1)
         sample = sample.contiguous()
+        
+        seg = float2uint(extra["seg"], rescale=False).to(dist_util.dev())
+        img_batch = float2uint(img_batch, rescale=True)
 
-        gathered_samples = [th.zeros_like(sample) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_samples, sample)  # gather not supported with NCCL
-        all_images.extend([sample.cpu().numpy() for sample in gathered_samples])
+        save_sample = th.concat([img_batch,seg,sample],dim=3)
+        
+        gathered_samples = [th.zeros_like(save_sample) for _ in range(dist.get_world_size())]
+        dist.all_gather(gathered_samples, save_sample)  # gather not supported with NCCL
+        all_images.extend([save_sample.cpu().numpy() for save_sample in gathered_samples])
     
     arr = np.concatenate(all_images, axis=0)
     end.record()
@@ -125,13 +130,9 @@ def main():
     
     if dist.get_rank() == 0:
         logger.log(f"saving to {logger.get_dir()}")
-        for idx, (img, extra) in enumerate(data):
-            
-            seg = float2uint(extra["seg"]).numpy()
-            img = float2uint(img).numpy()
-            generated = arr[idx][None,...]
-            
-            save_arr = np.concatenate([img,seg,generated],axis=3)
+        for idx, sample in enumerate(arr):
+
+            save_arr = arr[idx][None,...]
             
             out_path = os.path.join(logger.get_dir(), f"samples_{idx}.npy")
             np.save(out_path, save_arr)
@@ -160,8 +161,11 @@ def create_argparser():
     add_dict_to_argparser(parser, defaults)
     return parser
 
-def float2uint(input:th.Tensor):
-    input = (input * 255).clamp(0, 255).to(th.uint8)
+def float2uint(input:th.Tensor, rescale=True):
+    if rescale:
+        input = (input * 255).clamp(0, 255).to(th.uint8)
+    else:
+        input = input.clamp(0, 255).to(th.uint8)   
     input = input.permute(0, 2, 3, 1)
     input = input.contiguous()
     return input

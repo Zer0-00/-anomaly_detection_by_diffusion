@@ -6,8 +6,8 @@ import os
 import csv
 
 def dice_coeff(
-    images:Union[torch.Tensor,np.ndarray], 
     targets:Union[torch.Tensor,np.ndarray], 
+    images:Union[torch.Tensor,np.ndarray], 
     epsilon=1e-6
 ):
     """
@@ -31,8 +31,8 @@ def dice_coeff(
     return dice
     
 def AUROC(
-    images:Union[torch.Tensor,np.ndarray], 
     targets:Union[torch.Tensor,np.ndarray], 
+    images:Union[torch.Tensor,np.ndarray], 
 ):
     """
     calculate AUROC
@@ -44,12 +44,18 @@ def AUROC(
     assert images.shape == targets.shape and type(images) == type(targets),\
          "the input and target images should share the same shape and type"
     if isinstance(images, torch.Tensor):     
-        targets = targets.detach().cpu().to(torch.uint8).numpy().flatten()
-        images = images.detach().cpu().numpy().flatten()
+        targets = targets.detach().cpu().to(torch.uint8).numpy().flatten().squeeze()
+        images = images.detach().cpu().numpy().flatten().squeeze()
     else:
-        targets = targets.flatten()
-        images = images.flatten()
-    return roc_auc_score(targets, images)
+        targets = targets.flatten().squeeze()
+        images = images.flatten().squeeze()
+        
+    try: 
+        score = roc_auc_score(targets, images)
+    except ValueError:
+        score = -1
+        
+    return score
 
 class Brats_Evaluator():
     def __init__(
@@ -57,8 +63,8 @@ class Brats_Evaluator():
         data_folder,
         metrics,
     ):
-        self.data_folder = data_folder,
-        self.metrics = metrics,
+        self.data_folder = data_folder
+        self.metrics = metrics
         
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         

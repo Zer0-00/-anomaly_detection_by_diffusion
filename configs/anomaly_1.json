@@ -7,14 +7,14 @@
     "classifier_attention_resolutions": "32,16,8",
     "classifier_resblock_updown": "True", 
     "classifier_use_scale_shift_norm": "True",
-    "classifier_scale": 1.0,
+    "classifier_scale": 100,
     "classifier_path": "model/configs1/classifier.pt",
 
     "diffusion_steps": 1000,
     "noise_schedule": "linear",
 
 
-    "batch_size": 1,
+    "batch_size": 16,
 
     "timestep_respacing": "ddim1000",
     "use_ddim": "True",

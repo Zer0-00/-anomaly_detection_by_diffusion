@@ -51,6 +51,7 @@ def load_data(
     elif limited_num <= 0:
             yield from loader
     else:
+        loader = iter(loader)
         for _ in range(limited_num):
             data = next(loader)
             yield data
