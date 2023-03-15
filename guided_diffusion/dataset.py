@@ -262,7 +262,7 @@ class Brats2020(Dataset):
             outputs["y"] = y
         if self.test:
             #generating segmentation ground truth
-            outputs["seg"] = seg > 0 * 1.0
+            outputs["seg"] = seg
             
         return image, outputs
         
