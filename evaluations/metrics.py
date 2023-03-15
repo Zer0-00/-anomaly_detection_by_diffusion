@@ -4,6 +4,7 @@ import numpy as np
 from typing import Union
 import os
 import csv
+from functools import partial
 
 def dice_coeff(
     targets:Union[torch.Tensor,np.ndarray], 
@@ -29,7 +30,23 @@ def dice_coeff(
         
     dice = dice / images.shape[0]
     return dice
-    
+
+def dice_specific(
+    targets:Union[torch.Tensor,np.ndarray], 
+    images:Union[torch.Tensor,np.ndarray], 
+    epsilon=1e-6,
+    region_type='WT'
+):
+    assert region_type in ["ET", "TC", "WT"], "region type should be one of ET, TC, WT"
+    if region_type == 'ET':
+        masks = (targets == 1) * 1
+    elif region_type == "TC":
+        masks = ((targets == 1) + (targets == 4)) > 0 * 1
+    else:
+        masks = ((targets == 1) + (targets == 2) + (targets == 4)) > 0 * 1
+        
+    return dice_coeff(masks, images, epsilon=epsilon)
+
 def AUROC(
     targets:Union[torch.Tensor,np.ndarray], 
     images:Union[torch.Tensor,np.ndarray], 
@@ -88,7 +105,9 @@ class Brats_Evaluator():
                 
 def evaluate_Brat(data_folder, output_dir):
     metrics = {
-        "DICE": dice_coeff,
+        "DICE_ET": partial(dice_specific, region_type="ET"),
+        "DICE_TC": partial(dice_specific, region_type="TC"),
+        "DICE_WT": partial(dice_specific, region_type="WT"),
         "AUROC": AUROC
     }
     
