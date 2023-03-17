@@ -6,26 +6,18 @@ import argparse
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-import blobfile as bf
 import numpy as np
 import torch as th
 import torch.distributed as dist
-import torch.nn.functional as F
-from torch.nn.parallel.distributed import DistributedDataParallel as DDP
-from torch.optim import AdamW
 import tqdm
 
 from guided_diffusion import dist_util, logger
 from guided_diffusion.dataset import load_data
-from guided_diffusion.fp16_util import MixedPrecisionTrainer
-from guided_diffusion.resample import create_named_schedule_sampler
 from guided_diffusion.script_util import (
     add_dict_to_argparser,
     args_to_dict,
-    classifier_and_diffusion_defaults,
-    create_classifier_and_diffusion,
+
 )
-from guided_diffusion.train_util import parse_resume_step_from_filename, log_loss_dict
 from guided_diffusion.utils import load_parameters
 from guided_diffusion.anomaly_utils import create_semantic_encoder, semantic_encoder_defaults
 

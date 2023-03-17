@@ -3,6 +3,7 @@ from collections import defaultdict
 import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
+import os
 
 def evaluate_training(progress_dir, save_dir):
     """
@@ -66,6 +67,37 @@ def evaluate_image(image_path, save_dir):
     plt.imshow(pred.squeeze(), cmap='gray')
     plt.savefig(save_dir)
     plt.close
+    
+def evaluate_z(data_path, output_path):
+    data = np.load(data_path)
+    
+    zs = data['all_zs']
+    labels = data['all_labels'].squeeze()
+    
+    from sklearn import manifold
+    tsne = manifold.TSNE()
+    z_tsne = tsne.fit(zs)
+    
+    z_min, z_max = z_tsne.min(0), z_tsne.max(0)
+    z_norm = (z_tsne - z_min) / (z_max - z_min)
+    
+    normal_mask = np.where(labels == 0)
+    abnormal_mask = np.where(labels == 1)
+    
+    plt.figure(figsize=(8,8))
+    
+    plt.scatter(z_norm[normal_mask,0], z_norm[normal_mask,1], c='b')
+    plt.scatter(z_norm[abnormal_mask,0], z_norm[abnormal_mask,1], c='r')
+    plt.axis("off")
+    save_dir = os.path.join(output_path, 'tsne')
+    plt.savefig(save_dir)
+    plt.close()
+    
+    normal_meanZ = zs[normal_mask].mean(axis=0)
+    abnormal_meanZ = zs[abnormal_mask].mean(axis=0)
+    
+    save_dir = os.path.join(output_path, 'templates')
+    np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
     
 if __name__ == '__main__':
     # progress_dir = "output/classfier/progress.csv"
