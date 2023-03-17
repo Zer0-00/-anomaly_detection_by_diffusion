@@ -55,24 +55,24 @@ def main():
     all_labels = []
     
     logger.log("Z generating...")
-    
-    for imgs, extra in tqdm.tqdm(data):
+    with th.no_grad():
+        for imgs, extra in tqdm.tqdm(data):
 
-        labels = extra["y"]
-        img_batch = imgs.to(dist_util.dev())
+            labels = extra["y"]
+            img_batch = imgs.to(dist_util.dev())
+            
+            z = model((img_batch, th.zeros_like((img_batch.shape[0],1), device=dist_util.dev())))
+            
+            gathered_zs = [th.zeros_like(z) for _ in range(dist.get_world_size())]
+            dist.all_gather(gathered_zs, z)  # gather not supported with NCCL
+            all_zs.extend([z.cpu().numpy() for z in gathered_zs])
+            
+            gathered_labels = [th.zeros_like(z) for _ in range(dist.get_world_size())]
+            dist.all_gather(gathered_labels, labels)  # gather not supported with NCCL
+            all_labels.extend([labels.cpu().numpy() for labels in gathered_labels])
         
-        z = model((img_batch, th.zeros_like((img_batch.shape[0],1), device=dist_util.dev())))
-        
-        gathered_zs = [th.zeros_like(z) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_zs, z)  # gather not supported with NCCL
-        all_zs.extend([z.cpu().numpy() for z in gathered_zs])
-        
-        gathered_labels = [th.zeros_like(z) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_labels, labels)  # gather not supported with NCCL
-        all_labels.extend([labels.cpu().numpy() for labels in gathered_labels])
-    
-    all_zs = np.concatenate(all_zs, axis=0)
-    all_labels = np.concatenate(all_labels, axis=0)
+        all_zs = np.concatenate(all_zs, axis=0)
+        all_labels = np.concatenate(all_labels, axis=0)
     
     if dist.get_rank() == 0:
         logger.log(f"saving to {logger.get_dir()}")
