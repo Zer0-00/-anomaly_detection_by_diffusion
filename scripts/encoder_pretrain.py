@@ -25,6 +25,7 @@ from guided_diffusion.script_util import (
 )
 from guided_diffusion.train_util import parse_resume_step_from_filename, log_loss_dict
 from guided_diffusion.utils import load_parameters
+from guided_diffusion.anomaly_utils import create_semantic_encoder, semantic_encoder_defaults
 
 def main():
     args = create_argparser().parse_args()
@@ -34,14 +35,10 @@ def main():
     logger.configure(dir=args.output_dir)
 
     logger.log("creating model and diffusion...")
-    model, diffusion = create_classifier_and_diffusion(
-        **args_to_dict(args, classifier_and_diffusion_defaults().keys())
+    model = create_semantic_encoder(
+        **args_to_dict(args, semantic_encoder_defaults().keys())
     )
     model.to(dist_util.dev())
-    if args.noised:
-        schedule_sampler = create_named_schedule_sampler(
-            args.schedule_sampler, diffusion
-        )
 
     resume_step = 0
     if args.resume_checkpoint:
@@ -107,12 +104,8 @@ def main():
         labels = extra["y"].to(dist_util.dev())
 
         batch = batch.to(dist_util.dev())
-        # Noisy images
-        if args.noised:
-            t, _ = schedule_sampler.sample(batch.shape[0], dist_util.dev())
-            batch = diffusion.q_sample(batch, t)
-        else:
-            t = th.zeros(batch.shape[0], dtype=th.long, device=dist_util.dev())
+
+        t = th.zeros(batch.shape[0], dtype=th.long, device=dist_util.dev())
 
         for i, (sub_batch, sub_labels, sub_t) in enumerate(
             split_microbatches(args.microbatch, batch, labels, t)
@@ -128,7 +121,7 @@ def main():
             # losses[f"{prefix}_acc@5"] = compute_top_k(
             #     logits, sub_labels, k=5, reduction="none"
             # )
-            log_loss_dict(diffusion, sub_t, losses)
+            log_loss_dict(None, sub_t, losses)
             del losses
             loss = loss.mean()
             if loss.requires_grad:
@@ -204,7 +197,6 @@ def create_argparser():
     defaults = dict(
         data_dir="",
         val_data_dir="",
-        noised=True,
         iterations=150000,
         lr=3e-4,
         weight_decay=0.0,
@@ -217,11 +209,11 @@ def create_argparser():
         eval_interval=5,
         save_interval=10000,
         dataset="brats2020",
-        output_dir="./output/classifier"
+        output_dir="./output/configs4/encoder"
     )
-    defaults.update(classifier_and_diffusion_defaults())
+    defaults.update(semantic_encoder_defaults())
     parser = argparse.ArgumentParser()
-    parser.add_argument(f"--cfg", default="classifier_1", type=str)
+    parser.add_argument(f"--cfg", default="encoder_4", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 

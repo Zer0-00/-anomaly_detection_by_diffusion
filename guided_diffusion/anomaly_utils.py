@@ -407,7 +407,7 @@ def semantic_encoder_defaults():
         encoder_pool="attention",
         in_channels=3,
         encoder_channel_mult="1,1,2,2,4,4",
-        num_head=64
+        num_head=64,
     )
     return defaults
 
