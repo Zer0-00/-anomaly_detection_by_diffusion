@@ -154,8 +154,8 @@ class TrainLoop:
 
     def run_loop(self):
         while (
-            not self.lr_anneal_steps
-            or self.step + self.resume_step < self.lr_anneal_steps
+            (not self.lr_anneal_steps
+            or self.step + self.resume_step < self.lr_anneal_steps)
             and self.step + self.resume_step < self.iterations
         ):
             batch, cond = next(self.data)
@@ -298,10 +298,52 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
             lr_anneal_steps=lr_anneal_steps,
         )
         self.semantic_encoder = semantic_encoder
+        self.encoder_mp_trainer = MixedPrecisionTrainer(
+            model=self.semantic_encoder,
+            use_fp16=self.use_fp16,
+            fp16_scale_growth=fp16_scale_growth
+        )
         self.opt = AdamW(
-            filter(lambda x: x.requires_grad, self.mp_trainer.master_params), lr=self.lr, weight_decay=self.weight_decay
+            filter(lambda x: x.requires_grad, self.mp_trainer.master_params+self.encoder_mp_trainer.master_params), lr=self.lr, weight_decay=self.weight_decay
         )
         
+        if self.resume_step:
+            self._load_optimizer_state()
+            # Model was resumed, either due to a restart or a checkpoint
+            # being specified at the command line.
+            self.ema_params = [
+                self._load_ema_parameters(rate) for rate in self.ema_rate
+            ]
+        else:
+            self.ema_params = [
+                copy.deepcopy(self.mp_trainer.master_params)
+                for _ in range(len(self.ema_rate))
+            ]
+            self.encoder_ema_params = [
+                copy.deepcopy(self.encoder_mp_trainer.master_params)
+                for _ in range(len(self.ema_rate))
+            ]
+        
+        if th.cuda.is_available():
+            self.ddp_encoder = DDP(
+                self.semantic_encoder,
+                device_ids=[dist_util.dev()],
+                output_device=dist_util.dev(),
+                broadcast_buffers=False,
+                bucket_cap_mb=128,
+                find_unused_parameters=False,
+            )
+        else:
+            if dist.get_world_size() > 1:
+                logger.warn(
+                    "Distributed training requires CUDA. "
+                    "Gradients will not be synchronized properly!"
+                )
+            self.use_ddp = False
+            self.ddp_encoder = self.semantic_encoder
+        
+        dist_util.sync_params(self.model.parameters())
+    
     def forward_backward(self, batch, cond):
         self.mp_trainer.zero_grad()
         for i in range(0, batch.shape[0], self.microbatch):
@@ -376,7 +418,6 @@ def find_ema_checkpoint(main_checkpoint, step, rate):
     if bf.exists(path):
         return path
     return None
-
 
 def log_loss_dict(diffusion, ts, losses):
     for key, values in losses.items():
