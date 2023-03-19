@@ -37,22 +37,21 @@ def main():
     model, diffusion = create_decoupled_model_and_diffusion(
         **args_to_dict(args, decoupled_diffusion_and_diffusion_defaults().keys())
     )
-    model.to(dist_util.dev())
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
     
-    # if args.encoder_path is not "":
-    #     #load weights from a pretrained classifier except the last layer
-    #     state_dict =  dist_util.load_state_dict(args.encoder_path, map_location='cpu')
+    if args.encoder_path is not "":
+        #load weights from a pretrained classifier except the last layer
+        state_dict =  dist_util.load_state_dict(args.encoder_path, map_location='cpu')
 
-    #     for k in list(state_dict):
-    #         if k.startswith('out'):
-    #             state_dict.pop(k)
+        for k in list(state_dict):
+            if k.startswith('out'):
+                state_dict.pop(k)
 
-    #     semantic_encoder.load_state_dict(state_dict,strict=False)
-    #     for name, param in semantic_encoder.named_parameters():
-    #         if 'pool' not in name:
-    #             param.requires_grad = False
-    # semantic_encoder.to(dist_util.dev())
+        model.encoder.load_state_dict(state_dict,strict=False)
+        for name, param in model.encoder.named_parameters():
+            if 'pool' not in name:
+                param.requires_grad = False
+    model.to(dist_util.dev())
 
 
     logger.log("creating data loader...")

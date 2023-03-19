@@ -19,7 +19,7 @@ from guided_diffusion.script_util import (
 
 )
 from guided_diffusion.utils import load_parameters
-from guided_diffusion.anomaly_utils import create_semantic_encoder, semantic_encoder_defaults
+from guided_diffusion.anomaly_utils import create_decoupled_model, decoupled_diffusion_defaults
 
 
 def main():
@@ -30,11 +30,11 @@ def main():
     logger.configure(dir=args.output_dir)
 
     logger.log("loading model")
-    model = create_semantic_encoder(
-        **args_to_dict(args, semantic_encoder_defaults().keys())
+    model = create_decoupled_model(
+        **args_to_dict(args, decoupled_diffusion_defaults().keys())
     )
     model.load_state_dict(
-        dist_util.load_state_dict(args.encoder_path, map_location='cpu')
+        dist_util.load_state_dict(args.model_path, map_location='cpu')
     )
     
     model.to(dist_util.dev())
@@ -61,7 +61,7 @@ def main():
             labels = extra["y"]
             img_batch = imgs.to(dist_util.dev())
             
-            z = model((img_batch, th.zeros_like((img_batch.shape[0],1), device=dist_util.dev())))
+            z = model.get_embbed((img_batch))
             
             gathered_zs = [th.zeros_like(z) for _ in range(dist.get_world_size())]
             dist.all_gather(gathered_zs, z)  # gather not supported with NCCL
@@ -75,9 +75,19 @@ def main():
         all_labels = np.concatenate(all_labels, axis=0)
     
     if dist.get_rank() == 0:
+        normal_mask = np.where(labels == 0)
+        abnormal_mask = np.where(labels == 1)
+        normal_meanZ = all_zs[normal_mask].mean(axis=0)
+        abnormal_meanZ = all_zs[abnormal_mask].mean(axis=0)
+    
+        save_dir = os.path.join(logger.get_dir(), 'templates')
+        np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
+        
+        
         logger.log(f"saving to {logger.get_dir()}")
-        out_path = os.path.join(logger.get_dir(), "zs_and_labels.npy")
-        np.savez(out_path, all_zs=all_zs, all_labels=all_labels)
+        if args.save_allz:
+            out_path = os.path.join(logger.get_dir(), "zs_and_labels.npy")
+            np.savez(out_path, all_zs=all_zs, all_labels=all_labels)
         
 
     dist.barrier()
@@ -87,26 +97,16 @@ def main():
 def create_argparser():
     defaults = dict(
         data_dir="",
-        val_data_dir="",
-        noised=True,
-        iterations=150000,
-        lr=3e-4,
-        weight_decay=0.0,
-        anneal_lr=False,
         batch_size=4,
         microbatch=-1,
-        schedule_sampler="uniform",
-        resume_checkpoint="",
-        log_interval=10,
-        eval_interval=5,
-        save_interval=10000,
         dataset="brats2020",
         output_dir="./output/classifier",
-        encoder_path=""
+        model_path="",
+        save_allz=False,
     )
-    defaults.update(semantic_encoder_defaults())
+    defaults.update(decoupled_diffusion_defaults())
     parser = argparse.ArgumentParser()
-    parser.add_argument(f"--cfg", default="encoder_4", type=str)
+    parser.add_argument(f"--cfg", default="image_3", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 

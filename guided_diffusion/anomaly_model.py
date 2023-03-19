@@ -235,3 +235,7 @@ class DecoupledDiffusionModel(torch.nn.Module):
     def get_embbed(self, x):
         return self.encoder(x, torch.zeros((x.shape[0],), device=x.device))
     
+    def predict_with_Z(self, x, timesteps, z):
+        denoised_img = self.denoised(x, timesteps, extra_emb=z)
+        
+        return denoised_img
