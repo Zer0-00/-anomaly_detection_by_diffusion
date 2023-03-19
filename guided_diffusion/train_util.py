@@ -12,6 +12,7 @@ from . import dist_util, logger
 from .fp16_util import MixedPrecisionTrainer
 from .nn import update_ema
 from .resample import LossAwareSampler, UniformSampler
+from .anomaly_model import DecoupledDiffusionModel
 
 # For ImageNet experiments, this was a good default value.
 # We found that the lg_loss_scale quickly climbed to
@@ -261,9 +262,8 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
     def __init__(
         self,
         *, 
-        model,
+        model:DecoupledDiffusionModel,
         diffusion,
-        semantic_encoder,
         data,
         batch_size,
         microbatch,
@@ -297,52 +297,6 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
             weight_decay=weight_decay,
             lr_anneal_steps=lr_anneal_steps,
         )
-        self.semantic_encoder = semantic_encoder
-        self.encoder_mp_trainer = MixedPrecisionTrainer(
-            model=self.semantic_encoder,
-            use_fp16=self.use_fp16,
-            fp16_scale_growth=fp16_scale_growth
-        )
-        self.opt = AdamW(
-            filter(lambda x: x.requires_grad, self.mp_trainer.master_params+self.encoder_mp_trainer.master_params), lr=self.lr, weight_decay=self.weight_decay
-        )
-        
-        if self.resume_step:
-            self._load_optimizer_state()
-            # Model was resumed, either due to a restart or a checkpoint
-            # being specified at the command line.
-            self.ema_params = [
-                self._load_ema_parameters(rate) for rate in self.ema_rate
-            ]
-        else:
-            self.ema_params = [
-                copy.deepcopy(self.mp_trainer.master_params)
-                for _ in range(len(self.ema_rate))
-            ]
-            self.encoder_ema_params = [
-                copy.deepcopy(self.encoder_mp_trainer.master_params)
-                for _ in range(len(self.ema_rate))
-            ]
-        
-        if th.cuda.is_available():
-            self.ddp_encoder = DDP(
-                self.semantic_encoder,
-                device_ids=[dist_util.dev()],
-                output_device=dist_util.dev(),
-                broadcast_buffers=False,
-                bucket_cap_mb=128,
-                find_unused_parameters=False,
-            )
-        else:
-            if dist.get_world_size() > 1:
-                logger.warn(
-                    "Distributed training requires CUDA. "
-                    "Gradients will not be synchronized properly!"
-                )
-            self.use_ddp = False
-            self.ddp_encoder = self.semantic_encoder
-        
-        dist_util.sync_params(self.model.parameters())
     
     def forward_backward(self, batch, cond):
         self.mp_trainer.zero_grad()
@@ -354,8 +308,7 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
             }
             last_batch = (i + self.microbatch) >= batch.shape[0]
             t, weights = self.schedule_sampler.sample(micro.shape[0], dist_util.dev())
-            micro_emb = self.semantic_encoder(micro, th.zeros_like(t, device=dist_util.dev()))
-            micro_cond["extra_emb"] = micro_emb
+            micro_cond["x0"] = micro
 
             compute_losses = functools.partial(
                 self.diffusion.training_losses,

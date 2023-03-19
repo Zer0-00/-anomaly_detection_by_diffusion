@@ -226,12 +226,12 @@ class DecoupledDiffusionModel(torch.nn.Module):
             use_new_attention_order=use_new_attention_order,
         )
         
-    def forward(self, x, timesteps):
-        extra_emb = self.encoder(x, timesteps)
-        generated_noise = self.denoised(x, timesteps, extra_emb=extra_emb)
+    def forward(self, x, x0):
+        extra_emb = self.get_embbed(x0)
+        denoised_img = self.denoised(x, extra_emb=extra_emb)
         
-        return generated_noise
+        return denoised_img
     
-    def get_embbed(self, x, timesteps):
-        return self.encoder(x, timesteps)
+    def get_embbed(self, x):
+        return self.encoder(x, torch.zeros((x.shape[0],), device=x.device))
     
