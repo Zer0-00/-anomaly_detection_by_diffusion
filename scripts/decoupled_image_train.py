@@ -39,7 +39,7 @@ def main():
     )
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
     
-    if args.encoder_path is not "":
+    if args.encoder_path != "":
         #load weights from a pretrained classifier except the last layer
         state_dict =  dist_util.load_state_dict(args.encoder_path, map_location='cpu')
 
