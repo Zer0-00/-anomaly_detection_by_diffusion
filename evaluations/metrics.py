@@ -6,16 +6,18 @@ import os
 import csv
 from functools import partial
 
+ImageClass = Union[torch.Tensor,np.ndarray]
+
 def dice_coeff(
-    targets:Union[torch.Tensor,np.ndarray], 
-    images:Union[torch.Tensor,np.ndarray], 
+    targets:ImageClass, 
+    images:ImageClass, 
     epsilon=1e-6
 ):
     """
     calculate dice coefficient
 
     Args:
-        images (torch.Tensor|np.ndarray): input image of (N,1,H,W)
+        images (torch.Tensor|np.ndarray): input image of (N,1,H,W) or (N,H,W,1)
         targets (torch.Tensor|np.ndarry): ground truth, should share the same shape as input
         epsilon (optional): a small number added to the denominator. Defaults to 1e-6.
     """
@@ -32,8 +34,8 @@ def dice_coeff(
     return dice
 
 def region_specific_metrics(
-    targets:Union[torch.Tensor,np.ndarray], 
-    images:Union[torch.Tensor,np.ndarray], 
+    targets:ImageClass, 
+    images:ImageClass, 
     func,
     region_type='WT',
     **func_kwargs
@@ -49,14 +51,14 @@ def region_specific_metrics(
     return func(masks, images, **func_kwargs)
 
 def AUROC(
-    targets:Union[torch.Tensor,np.ndarray], 
-    images:Union[torch.Tensor,np.ndarray], 
+    targets:ImageClass, 
+    images:ImageClass, 
 ):
     """
     calculate AUROC
 
     Args:
-        images (torch.Tensor|np.ndarray): input image of (N,1,H,W)
+        images (torch.Tensor|np.ndarray): input image of (N,1,H,W) or (N,H,W,1)
         targets (torch.Tensor|np.ndarray): ground truth, should share the same shape as input
     """
     assert images.shape == targets.shape and type(images) == type(targets),\
@@ -76,17 +78,51 @@ def AUROC(
         
     return score
 
-class Brats_Evaluator():
+def min_max_scale(image:ImageClass):
+    return (image - image.min())/(image.max()-image.min())
+
+def nonzero_masking(images:ImageClass, targets:ImageClass):
+    """
+    masking targets according to the non-zero pixels of images
+     
+    p.s: non-zero is not mean the value of pixels is zero(sometimes tensor can be among [-1,1]),
+         so pixels are reagarded as non-zero when the value of them is larger than images.min()
+    
+    Args:
+        images (torch.Tensor|np.ndarray): input image of (N,1,H,W) or (N,H,W,1)
+        targets (torch.Tensor|np.ndarray): ground truth, should share the same shape as input
+    """
+    assert type(images) == type(targets),\
+        "the input and target images should share the same and type"
+    if isinstance(images, torch.Tensor):
+        feature_dim = 1
+        assert images.shape[2,3] == targets.shape[2,3],\
+            "the input and target images should share the same shape(H,W)"  
+            
+    else:
+        feature_dim = 1
+        assert images.shape[1,2] == targets.shape[1,2],\
+            "the input and target images should share the same shape(H,W)"
+            
+    mask = ((images > images.min() * 1.0).sum(feature_dim) == 4) * 1.0
+    
+    targets = targets * mask + targets.min() * (1 - mask)
+    
+    return targets
+        
+    
+
+class BratsEvaluator():
     def __init__(
         self,
         data_folder,
         metrics,
-        threshold,
+        mask_fn=None,
     ):
         self.data_folder = data_folder
         self.metrics = metrics
-        self.threshold = threshold
         
+        self.mask_fn = mask_fn if mask_fn is not None else min_max_scale
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
     def evaluate(self,output_dir):
@@ -103,12 +139,13 @@ class Brats_Evaluator():
                 seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
                 generated = data[0,:,:,5:]*1.0
                 pred = np.expand_dims(np.sum((generated-img)**2, axis=2), axis=(0,1))
-                pred = (pred - pred.min())/(pred.max()-pred.min())
+                pred = nonzero_masking(img, pred)
+                pred = self.mask_fn(pred)
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
                 writer.writerow(metrics_img)
                 
-def evaluate_Brat(data_folder, output_dir, threshold=700):
+def evaluate_Brat(data_folder, output_dir):
     metrics = {
         "DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         "DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
@@ -118,10 +155,9 @@ def evaluate_Brat(data_folder, output_dir, threshold=700):
         "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
     }
     
-    evaluator = Brats_Evaluator(
+    evaluator = BratsEvaluator(
         data_folder=data_folder,
         metrics=metrics,
-        threshold=threshold,
     )
     
     evaluator.evaluate(output_dir)

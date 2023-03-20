@@ -40,7 +40,7 @@ def main():
     model.to(dist_util.dev())
     model.eval()
 
-    if args.encoder_use_fp16:
+    if args.use_fp16:
         model.convert_to_fp16()
 
     logger.log("creating data loader...")
@@ -48,7 +48,9 @@ def main():
         data_dir=args.data_dir,
         batch_size=args.batch_size,
         class_labels=True,
-        dataset=args.dataset
+        dataset=args.dataset,
+        deterministic=True,
+        limited_num=-1
     )
 
     all_zs = []
@@ -58,7 +60,7 @@ def main():
     with th.no_grad():
         for imgs, extra in tqdm.tqdm(data):
 
-            labels = extra["y"]
+            labels = extra["y"].to(dist_util.dev())
             img_batch = imgs.to(dist_util.dev())
             
             z = model.get_embbed((img_batch))
@@ -67,7 +69,7 @@ def main():
             dist.all_gather(gathered_zs, z)  # gather not supported with NCCL
             all_zs.extend([z.cpu().numpy() for z in gathered_zs])
             
-            gathered_labels = [th.zeros_like(z) for _ in range(dist.get_world_size())]
+            gathered_labels = [th.zeros_like(labels) for _ in range(dist.get_world_size())]
             dist.all_gather(gathered_labels, labels)  # gather not supported with NCCL
             all_labels.extend([labels.cpu().numpy() for labels in gathered_labels])
         
@@ -75,8 +77,8 @@ def main():
         all_labels = np.concatenate(all_labels, axis=0)
     
     if dist.get_rank() == 0:
-        normal_mask = np.where(labels == 0)
-        abnormal_mask = np.where(labels == 1)
+        normal_mask = np.where(all_labels == 0)
+        abnormal_mask = np.where(all_labels == 1)
         normal_meanZ = all_zs[normal_mask].mean(axis=0)
         abnormal_meanZ = all_zs[abnormal_mask].mean(axis=0)
     
@@ -100,13 +102,13 @@ def create_argparser():
         batch_size=4,
         microbatch=-1,
         dataset="brats2020",
-        output_dir="./output/classifier",
+        output_dir="./output/configs3/Z/",
         model_path="",
         save_allz=False,
     )
     defaults.update(decoupled_diffusion_defaults())
     parser = argparse.ArgumentParser()
-    parser.add_argument(f"--cfg", default="image_3", type=str)
+    parser.add_argument(f"--cfg", default="zGenerate_3", type=str)
     add_dict_to_argparser(parser, defaults)
     return parser
 
