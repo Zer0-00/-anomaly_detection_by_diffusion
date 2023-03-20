@@ -4,8 +4,8 @@
     "batch_size": 6,
     "microbatch": 12,
     "log_interval": 1000,
-    "save_interval": 25000,
-    "iterations": 500000,
+    "save_interval": 10000,
+    "iterations": 50000,
     "output_dir":"./output/configs3/diffusion",
 
     "image_size": 256,
