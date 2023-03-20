@@ -95,16 +95,17 @@ def nonzero_masking(images:ImageClass, targets:ImageClass):
     assert type(images) == type(targets),\
         "the input and target images should share the same and type"
     if isinstance(images, torch.Tensor):
-        feature_dim = 1
-        assert images.shape[2,3] == targets.shape[2,3],\
-            "the input and target images should share the same shape(H,W)"  
+        sum_kwargs = {"dim":1, "keepdim": True}
+        assert images.shape[2:] == targets.shape[2:],\
+            f"the input and target images should share the same shape(H,W) get image: {images.shape[2:]} and target: {targets.shape[2:]} "  
             
     else:
-        feature_dim = 1
-        assert images.shape[1,2] == targets.shape[1,2],\
-            "the input and target images should share the same shape(H,W)"
+        #numpy
+        assert images.shape[1:3] == targets.shape[1:3],\
+            f"the input and target images should share the same shape(H,W), get image: {images.shape[1:3]} and target: {targets.shape[1:3]}"
+        sum_kwargs = {"axis":3, "keepdims": True}
             
-    mask = ((images > images.min() * 1.0).sum(feature_dim) == 4) * 1.0
+    mask = ((images > images.min() * 1.0).sum(**sum_kwargs) == 4) * 1.0
     
     targets = targets * mask + targets.min() * (1 - mask)
     
@@ -135,10 +136,10 @@ class BratsEvaluator():
                 file_dir = os.path.join(self.data_folder, file_name)
                 data = np.load(file_dir)
                 
-                img = data[0,:,:,:4]*1.0
-                seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
-                generated = data[0,:,:,5:]*1.0
-                pred = np.expand_dims(np.sum((generated-img)**2, axis=2), axis=(0,1))
+                img = data[np.newaxis,0,:,:,:4]*1.0
+                seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
+                generated = data[np.newaxis,0,:,:,5:]*1.0
+                pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
                 pred = nonzero_masking(img, pred)
                 pred = self.mask_fn(pred)
                 
@@ -163,5 +164,5 @@ def evaluate_Brat(data_folder, output_dir):
     evaluator.evaluate(output_dir)
     
 if __name__ == "__main__":
-    evaluate_Brat('./output/anomaly_detection','./output/anomaly_detection')
+    evaluate_Brat('output/configs3/anomaly_detection','output/configs3/anomaly_detection')
     

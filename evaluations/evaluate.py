@@ -100,8 +100,8 @@ def evaluate_z(data_path, output_path):
     np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
     
 if __name__ == '__main__':
-    progress_dir = "output/configs3/diffusion/progress.csv"
-    output_dir = "output/configs3/diffusion/progress.png"
-    evaluate_training(progress_dir,output_dir)
+    # progress_dir = "output/configs3/diffusion/progress.csv"
+    # output_dir = "output/configs3/diffusion/progress.png"
+    # evaluate_training(progress_dir,output_dir)
     
-    #evaluate_image("output/anomaly_detection/samples_0.npy", "output/anomaly_detection/samples_0.png")
+    evaluate_image("output/configs3/anomaly_detection/samples_21.npy", "output/configs3/anomaly_detection/samples_21.png")
