@@ -88,7 +88,7 @@ def main():
         
         logger.log(f"saving to {logger.get_dir()}")
         if args.save_allz:
-            out_path = os.path.join(logger.get_dir(), "zs_and_labels.npy")
+            out_path = os.path.join(logger.get_dir(), "zs_and_labels")
             np.savez(out_path, all_zs=all_zs, all_labels=all_labels)
         
 

@@ -1,6 +1,5 @@
 import json
 import os
-from collections import defaultdict
 import torch
 from torchvision import utils as vutils
 import numpy as np
@@ -27,13 +26,31 @@ def load_parameters(args:argparse.Namespace) -> dict:
     
     #change type
     for k in load_args:
-        load_args[k] = type(args.__dict__[k])(load_args[k])
+        assert k in args.__dict__.keys(), f"Unknown parameter{k}"
+        v_type = type(args.__dict__[k])
+        if args.__dict__[k] is None:
+            v_type = str
+        elif isinstance(args.__dict__[k], bool):
+            v_type = str2bool
+        
+        load_args[k] = v_type(load_args[k])
             
     load_args["cfgs_name"] = cfgs_name
 
     return load_args
 
-
+def str2bool(str_input:str):
+    if str_input.lower() in ("true", 't'):
+        output = True
+    elif str_input.lower() in ('false', 'f'):
+        output = False
+    else:
+        try: 
+            output = float(str_input) > 0
+        except:
+            raise TypeError("Invalid input for bool parameter!")
+    
+    return output
 
 def create_folders(f_dir):
     if not os.path.exists(f_dir):
