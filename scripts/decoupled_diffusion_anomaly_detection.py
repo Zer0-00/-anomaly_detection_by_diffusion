@@ -25,6 +25,8 @@ def main():
     args = create_argparser().parse_args()
     args.__dict__.update(utils.load_parameters(args))
     
+    th.random.manual_seed(args.random_seed)
+    
     dist_util.setup_dist()
     logger.configure(dir=args.output_dir)
 
@@ -44,7 +46,7 @@ def main():
             data_dir=args.data_dir,
             batch_size=args.batch_size,
             dataset=args.dataset,
-            deterministic=True,
+            deterministic=False,
             limited_num=2,
             test=True,
         )
@@ -123,7 +125,8 @@ def create_argparser():
         output_dir="./output/anomaly_detection",
         dataset="Brats2020",
         data_dir = "/home/xuehong/Datasets/Brats_Processed_Split/val",
-        z_path=""
+        z_path="",
+        random_seed=1126
     )
     defaults.update(decoupled_diffusion_and_diffusion_defaults())
     parser = argparse.ArgumentParser()

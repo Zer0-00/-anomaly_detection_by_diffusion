@@ -76,7 +76,7 @@ def evaluate_z(data_path, output_path):
     
     from sklearn import manifold
     tsne = manifold.TSNE()
-    z_tsne = tsne.fit(zs)
+    z_tsne = tsne.fit_transform(zs)
     
     z_min, z_max = z_tsne.min(0), z_tsne.max(0)
     z_norm = (z_tsne - z_min) / (z_max - z_min)
@@ -85,23 +85,31 @@ def evaluate_z(data_path, output_path):
     abnormal_mask = np.where(labels == 1)
     
     plt.figure(figsize=(8,8))
-    
+    plt.subplot(1,3,1)
     plt.scatter(z_norm[normal_mask,0], z_norm[normal_mask,1], c='b')
     plt.scatter(z_norm[abnormal_mask,0], z_norm[abnormal_mask,1], c='r')
     plt.axis("off")
-    save_dir = os.path.join(output_path, 'tsne')
+    plt.subplot(1,3,2)
+    plt.scatter(z_norm[normal_mask,0], z_norm[normal_mask,1], c='b')
+    plt.axis("off")
+    plt.subplot(1,3,3)
+    plt.scatter(z_norm[abnormal_mask,0], z_norm[abnormal_mask,1], c='r')
+    plt.axis("off")
+    save_dir = os.path.join(output_path, 'tsne.jpg')
     plt.savefig(save_dir)
     plt.close()
     
-    normal_meanZ = zs[normal_mask].mean(axis=0)
-    abnormal_meanZ = zs[abnormal_mask].mean(axis=0)
+    # normal_meanZ = zs[normal_mask].mean(axis=0)
+    # abnormal_meanZ = zs[abnormal_mask].mean(axis=0)
     
-    save_dir = os.path.join(output_path, 'templates')
-    np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
+    # save_dir = os.path.join(output_path, 'templates')
+    # np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
     
 if __name__ == '__main__':
     # progress_dir = "output/configs3/diffusion/progress.csv"
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    evaluate_image("output/configs3/anomaly_detection/samples_21.npy", "output/configs3/anomaly_detection/samples_21.png")
+    evaluate_image("output/configs3/anomaly_detection/samples_11.npy", "output/configs3/anomaly_detection/samples_11.png")
+    
+    #evaluate_z("output/configs3/zGenerate/zs_and_labels.npy.npz", "output/configs3/zGenerate/")
