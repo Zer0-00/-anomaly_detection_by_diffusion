@@ -26,7 +26,7 @@ def load_parameters(args:argparse.Namespace) -> dict:
     
     #change type
     for k in load_args:
-        assert k in args.__dict__.keys(), f"Unknown parameter{k}"
+        assert k in args.__dict__.keys(), f"Unknown parameter: {k}"
         v_type = type(args.__dict__[k])
         if args.__dict__[k] is None:
             v_type = str

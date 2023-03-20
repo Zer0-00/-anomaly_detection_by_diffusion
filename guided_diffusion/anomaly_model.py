@@ -7,8 +7,9 @@ def mse_map(image, target):
 
 class AnomalyDiffusion(SpacedDiffusion):
     def __init__(self, max_t, **kwargs):
-        self.max_t = max_t
-        kwargs["use_timesteps"] = self.filter_timesteps(kwargs["use_timesteps"], self.max_t)
+        self.max_origin_t = max_t
+        kwargs["use_timesteps"] = self.filter_timesteps(kwargs["use_timesteps"], self.max_origin_t)
+        self.max_origin_t = max(kwargs["use_timesteps"])
         
         super().__init__(**kwargs)
     
@@ -47,9 +48,9 @@ class AnomalyDiffusion(SpacedDiffusion):
         return a non-differentiable batch of detection map.
         """
         if detection_fn is None:
-            detection_fn = self.mse_map
+            detection_fn = mse_map
         
-        max_t = torch.tensor(self.max_t, device=device)
+        max_t = torch.tensor(self.num_timesteps, device=device)
         img_noised = self.q_sample(x_start=img, t=max_t)
         
         for sample in self.p_sample_loop_progressive(
@@ -112,7 +113,7 @@ class AnomalyDiffusion(SpacedDiffusion):
         if detection_fn is None:
             detection_fn = mse_map
         
-        max_t = torch.tensor(self.max_t, device=device)
+        max_t = torch.tensor(self.num_timesteps-1, device=device)
         img_noised = self.q_sample(x_start=img, t=max_t)
         
         for sample in self.ddim_sample_loop_progressive(

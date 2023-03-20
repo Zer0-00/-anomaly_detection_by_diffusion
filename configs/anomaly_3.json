@@ -1,8 +1,10 @@
 {
-    "batch_size": 6,
-    "microbatch": 12,
+    "batch_size": 12,
 
     "output_dir": "./output/configs3/anomaly_detection",
+
+    "timestep_respacing":"ddim25",
+    "use_ddim": "True",
     
     "image_size": 256,
     "in_channels": 4,
@@ -15,5 +17,6 @@
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val",
     "dataset": "brats2020",
-    "z_path": "model/configs3/template.npz"
+    "z_path": "model/configs3/template.npz",
+    "model_path": "model/configs3/ema_model.pt"
 }

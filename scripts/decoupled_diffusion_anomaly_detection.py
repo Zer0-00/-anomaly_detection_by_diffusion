@@ -31,7 +31,6 @@ def main():
     logger.log("creating model and diffusion...")
     model, diffusion = create_decoupled_model_and_diffusion(
         **args_to_dict(args, decoupled_diffusion_and_diffusion_defaults().keys()),
-        max_t=args.max_t,
     )
     model.load_state_dict(
         dist_util.load_state_dict(args.model_path, map_location="cpu")
