@@ -1,5 +1,5 @@
 """
-Train a noised image classifier on ImageNet.
+Generate Template Z.
 """
 
 import argparse
