@@ -191,7 +191,6 @@ def create_argparser():
         dataset="brats2020",
         output_dir="./output/configs3/Z/",
         model_path="",
-        save_allz=False,
         iterations=10000,
         log_interval=10,
         eval_interval=5,

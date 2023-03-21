@@ -1,12 +1,14 @@
 {
     "batch_size": 30,
     "microbatch": -1,
-    "save_allz": "True",
-    "iterations":10000,
+    "iterations":18000,
     "lr":1e-4,
+    "log_interval":600,
+    "eval_interval":5,
     "weight_decay":0.05,
+    "save_interval":600,
 
-    "output_dir": "./output/configs3/zGenerate",
+    "output_dir": "./output/configs3/Linear",
     
     "image_size": 256,
     "in_channels": 4,

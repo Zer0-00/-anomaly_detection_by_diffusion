@@ -41,6 +41,11 @@ def main():
     if args.use_fp16:
         model.convert_to_fp16()
     model.eval()
+
+    state_dict = dist_util.load_state_dict(args.Linear_path, map_location="cpu")
+    w = state_dict["weight"].to(dist_util.dev())
+    b = state_dict["bias"].to(dist_util.dev())
+    median = th.Tensor(np.load(args.median_path)['lgs_healthy']).to(dist_util.dev())
     
     data = load_data(
             data_dir=args.data_dir,
@@ -51,11 +56,12 @@ def main():
             test=True,
         )
     
-    z_embs = np.load(args.z_path)
-    z_normal = th.tensor(z_embs["normalZ"], device=dist_util.dev())   
-
     def model_fn(x, t, z):
         return model.predict_with_Z(x, t, z)
+    
+    def shiftingZ(z:th.Tensor):
+        s = (median - b - w.transpose_().mul(z))/(w.mul(w.transpose_()))
+        return z + s.mul(w)
 
     logger.log("testing...")
     
@@ -72,7 +78,8 @@ def main():
         # classes = th.randint(
         #     low=0, high=1, size=(args.batch_size,), device=dist_util.dev()
         # )
-        model_kwargs["z"] = z_normal.repeat(args.batch_size, 1)
+        z = model.get_embbed(imgs)
+        model_kwargs["z"] = shiftingZ(z)
         img_batch = imgs.to(dist_util.dev())
         
         sample = sample_fn(
