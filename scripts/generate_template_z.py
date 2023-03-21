@@ -85,6 +85,11 @@ def main():
         save_dir = os.path.join(logger.get_dir(), 'templates')
         np.savez(save_dir, normalZ=normal_meanZ, abnormalZ=abnormal_meanZ)
         
+        z_mean = all_zs.mean(axis=0)
+        z_std = all_zs.std(axis=0)
+        
+        out_path = os.path.join(logger.get_dir(), "z_state.npz")
+        np.savez(out_path, z_mean=z_mean, z_std=z_std)
         
         logger.log(f"saving to {logger.get_dir()}")
         if args.save_allz:
