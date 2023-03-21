@@ -192,12 +192,19 @@ def split_microbatches(microbatch, *args):
 def create_argparser():
     defaults = dict(
         data_dir="",
+        val_data_dir="",
         batch_size=4,
         microbatch=-1,
         dataset="brats2020",
         output_dir="./output/configs3/Z/",
         model_path="",
         save_allz=False,
+        iterations=10000,
+        log_interval=10,
+        eval_interval=5,
+        save_interval=100,
+        lr=3e-4,
+        weight_decay=0.0,
     )
     defaults.update(decoupled_diffusion_defaults())
     parser = argparse.ArgumentParser()
