@@ -42,11 +42,13 @@ def main():
         model.convert_to_fp16()
     model.eval()
 
-    state_dict = dist_util.load_state_dict(args.Linear_path, map_location="cpu")
+    state_dict = dist_util.load_state_dict(args.linear_path, map_location="cpu")
     w = state_dict["weight"].to(dist_util.dev())
     b = state_dict["bias"].to(dist_util.dev())
-    median = th.Tensor(np.load(args.median_path)['lgs_healthy']).to(dist_util.dev())
-    
+    median = th.Tensor(np.load(args.median_path)['lgs_healthy'], device=dist_util.dev())
+    z_state = np.load(args.z_state_path)
+    z_mean, z_std = th.Tensor(z_state['z_mean'], device=dist_util.dev()), th.Tensor(z_state['z_std'], device=dist_util.dev())
+        
     data = load_data(
             data_dir=args.data_dir,
             batch_size=args.batch_size,
@@ -60,8 +62,10 @@ def main():
         return model.predict_with_Z(x, t, z)
     
     def shiftingZ(z:th.Tensor):
+        z = (z - z_mean)/z_std
         s = (median - b - w.transpose_().mul(z))/(w.mul(w.transpose_()))
-        return z + s.mul(w)
+        z = z + s.mul(w)
+        z = z * z_std + z_mean
 
     logger.log("testing...")
     
@@ -132,7 +136,9 @@ def create_argparser():
         output_dir="./output/anomaly_detection",
         dataset="Brats2020",
         data_dir = "/home/xuehong/Datasets/Brats_Processed_Split/val",
-        z_path="",
+        z_state_path="",
+        linear_path="",
+        median_path="",
         random_seed=1126
     )
     defaults.update(decoupled_diffusion_and_diffusion_defaults())
