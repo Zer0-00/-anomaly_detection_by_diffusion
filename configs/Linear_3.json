@@ -3,6 +3,8 @@
     "microbatch": -1,
     "save_allz": "True",
     "iterations":10000,
+    "lr":1e-4,
+    "weight_decay":0.05,
 
     "output_dir": "./output/configs3/zGenerate",
     

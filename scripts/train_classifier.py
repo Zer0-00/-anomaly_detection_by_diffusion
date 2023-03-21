@@ -5,7 +5,7 @@ Train a Linear Classifier for image curing and save median confidence for normal
 import argparse
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
+os.environ["CUDA_LAUNCH_BLOCKING"] = '1'
 import numpy as np
 import torch as th
 import torch.distributed as dist
@@ -56,16 +56,16 @@ def main():
         batch_size=args.batch_size,
         class_labels=True,
         dataset=args.dataset,
-        deterministic=True,
+        deterministic=False,
     )
     
     if args.val_data_dir:
         val_data = load_data(
             data_dir=args.val_data_dir,
             batch_size=args.batch_size,
-            image_size=args.image_size,
-            class_cond=True,
-            dataset=args.dataset
+            class_labels=True,
+            dataset=args.dataset,
+            deterministic=True,
         )
     
     dist_util.sync_params(model.parameters())
@@ -75,17 +75,9 @@ def main():
         model=classifier, use_fp16=args.use_fp16, initial_lg_loss_scale=16.0
     )
     logger.log("creating optimiser")
-    opt = AdamW()
+    opt = AdamW(mp_trainer.master_params, lr=args.lr, weight_decay=args.weight_decay)
     
-    model = DDP(
-        model,
-        device_ids=[dist_util.dev()],
-        output_device=dist_util.dev(),
-        broadcast_buffers=False,
-        bucket_cap_mb=128,
-        find_unused_parameters=False,
-    )
-    model = DDP(
+    classifier = DDP(
         classifier,
         device_ids=[dist_util.dev()],
         output_device=dist_util.dev(),
@@ -107,7 +99,8 @@ def main():
         ):   
             z = model.get_embbed((sub_batch))
             logits = classifier(z)
-            loss = F.cross_entropy(logits, sub_labels, reduction="none")
+            
+            loss = F.binary_cross_entropy_with_logits(logits.squeeze(), sub_labels.to(th.float32), reduction="none")
             losses = {}
             losses[f"{prefix}_loss"] = loss.detach()
             losses[f"{prefix}_acc@1"] = compute_top_k(
@@ -136,10 +129,10 @@ def main():
         mp_trainer.optimize(opt)
         if val_data is not None and not step % args.eval_interval:
             with th.no_grad():
-                with model.no_sync():
-                    model.eval()
+                with classifier.no_sync():
+                    classifier.eval()
                     forward_backward_log(val_data, prefix="val")
-                    model.train()
+                    classifier.train()
         if not step % args.log_interval:
             logger.dumpkvs()
         if (
