@@ -110,6 +110,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    evaluate_image("output/configs3/anomaly_detection/samples_11.npy", "output/configs3/anomaly_detection/samples_11.png")
+    #evaluate_image("output/configs3/anomaly_detection/samples_11.npy", "output/configs3/anomaly_detection/samples_11.png")
     
-    #evaluate_z("output/configs3/zGenerate/zs_and_labels.npy.npz", "output/configs3/zGenerate/")
+    evaluate_z("output/configs3/zGenerate/zs_and_labels.npz", "output/configs3/zGenerate/")

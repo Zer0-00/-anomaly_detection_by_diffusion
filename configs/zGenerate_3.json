@@ -1,7 +1,7 @@
 {
     "batch_size": 30,
     "microbatch": -1,
-    "save_allz": "False",
+    "save_allz": "True",
 
     "output_dir": "./output/configs3/zGenerate",
     
@@ -16,5 +16,5 @@
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "dataset": "brats2020",
-    "model_path": "model/configs3/ema_model.pt"
+    "model_path": "model/configs3/ema_075000.pt"
 }
