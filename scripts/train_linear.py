@@ -40,11 +40,14 @@ def main():
     )
     
     z_state = np.load(args.z_state_path)
-    z_mean = th.Tensor(z_state['z_mean'], device=dist_util.dev())
-    z_std = th.Tensor(z_state['z_std'], device=dist_util.dev())
+    z_mean = th.Tensor(z_state['z_mean']).to(device=dist_util.dev())
+    z_std = th.Tensor(z_state['z_std']).to(device=dist_util.dev())
     
     model.to(dist_util.dev())
     model.eval()
+    
+    for param in model.parameters():
+        param.requires_grad = False
 
     classifier = th.nn.Linear(model.emb_dim, 1)
     classifier.to(dist_util.dev())
@@ -200,6 +203,7 @@ def create_argparser():
         save_interval=100,
         lr=3e-4,
         weight_decay=0.0,
+        z_state_path=""
     )
     defaults.update(decoupled_diffusion_defaults())
     parser = argparse.ArgumentParser()
