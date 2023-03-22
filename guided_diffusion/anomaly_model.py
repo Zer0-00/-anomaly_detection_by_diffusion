@@ -230,8 +230,8 @@ class DecoupledDiffusionModel(torch.nn.Module):
             use_new_attention_order=use_new_attention_order,
         )
         
-    def forward(self, x, timesteps, x0):
-        extra_emb = self.get_embbed(x0)
+    def forward(self, x, timesteps, x0, y=None):
+        extra_emb = self.get_embbed(x0, y=y)
         denoised_img = self.denoised(x, timesteps, extra_emb=extra_emb)
         
         return denoised_img
