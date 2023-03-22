@@ -5,7 +5,6 @@ Train a Linear Classifier for image curing and save median confidence for normal
 import argparse
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-os.environ["CUDA_LAUNCH_BLOCKING"] = '1'
 import numpy as np
 import torch as th
 import torch.distributed as dist
@@ -40,6 +39,9 @@ def main():
         dist_util.load_state_dict(args.model_path, map_location='cpu')
     )
     
+    z_state = np.load(args.z_state_path)
+    z_mean = th.Tensor(z_state['z_mean'], device=dist_util.dev())
+    z_std = th.Tensor(z_state['z_std'], device=dist_util.dev())
     
     model.to(dist_util.dev())
     model.eval()
@@ -98,6 +100,7 @@ def main():
             split_microbatches(args.microbatch, batch, labels)
         ):   
             z = model.get_embbed((sub_batch))
+            z = (z - z_mean)/z_std
             logits = classifier(z)
             
             loss = F.binary_cross_entropy_with_logits(logits.squeeze(), sub_labels.to(th.float32), reduction="none")

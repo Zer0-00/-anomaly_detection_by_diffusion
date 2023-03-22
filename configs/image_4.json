@@ -1,21 +1,20 @@
 {
-    "weight_decay": 0.05,
+    "weight_decay": 0.0,
     "lr": 1e-4,
-    "batch_size": 6,
-    "microbatch": 12,
+    "batch_size": 8,
+    "microbatch": 4,
     "log_interval": 1000,
     "save_interval": 10000,
     "iterations": 50000,
-    "output_dir":"./output/configs3/diffusion",
+    "output_dir":"./output/configs4/diffusion",
 
     "image_size": 256,
     "in_channels": 4,
-    "channel_mult": "1,1,2,3,4",
 
-    "encoder_model_channels": 32,
+    "encoder_model_channels": 128,
     "encoder_num_res_blocks": 4,
-    "encoder_channel_mult": "1,1,2,2,4,4",
-    "encoder_attention_resolutions": "32,16,8",
+    "encoder_channel_mult": "1,1,2,2,4,4,4",
+    "encoder_attention_resolutions": "16",
     "encoder_resblock_updown": "True",
     "encoder_use_scale_shift_norm": "True",
 
