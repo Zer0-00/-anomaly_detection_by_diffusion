@@ -711,6 +711,7 @@ class EncoderUNetModel(nn.Module):
         resblock_updown=False,
         use_new_attention_order=False,
         pool="adaptive",
+        num_classes=None,
     ):
         super().__init__()
 
@@ -730,6 +731,7 @@ class EncoderUNetModel(nn.Module):
         self.num_heads = num_heads
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
+        self.num_classes = num_classes
 
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
@@ -738,6 +740,9 @@ class EncoderUNetModel(nn.Module):
             linear(time_embed_dim, time_embed_dim),
         )
 
+        if self.num_classes is not None:
+            self.label_emb = nn.Embedding(num_classes, time_embed_dim)
+        
         ch = int(channel_mult[0] * model_channels)
         self.input_blocks = nn.ModuleList(
             [TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))]
@@ -871,7 +876,7 @@ class EncoderUNetModel(nn.Module):
         self.input_blocks.apply(convert_module_to_f32)
         self.middle_block.apply(convert_module_to_f32)
 
-    def forward(self, x, timesteps):
+    def forward(self, x, timesteps, y=None):
         """
         Apply the model to an input batch.
 
@@ -879,8 +884,16 @@ class EncoderUNetModel(nn.Module):
         :param timesteps: a 1-D batch of timesteps.
         :return: an [N x K] Tensor of outputs.
         """
+        assert (y is not None) == (
+            self.num_classes is not None
+        ), "must specify y if and only if the model is class-conditional"
+        
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
 
+        if self.num_classes is not None:
+            assert y.shape == (x.shape[0],)
+            emb = emb + self.label_emb(y)
+            
         results = []
         h = x.type(self.dtype)
         for module in self.input_blocks:

@@ -177,6 +177,7 @@ class DecoupledDiffusionModel(torch.nn.Module):
         encoder_use_scale_shift_norm=False,
         encoder_resblock_updown=False,
         pool='adaptive',
+        class_cond=False,
     ):
         super().__init__()
         
@@ -192,7 +193,8 @@ class DecoupledDiffusionModel(torch.nn.Module):
         self.dropout = dropout
         self.emb_dim = time_embed_dim
         self.dtype = torch.float16 if use_fp16 else torch.float32
-
+        self.class_cond = class_cond
+        
         self.encoder = EncoderUNetModel(
             image_size=self.image_size,
             in_channels=self.in_channels,
@@ -205,7 +207,8 @@ class DecoupledDiffusionModel(torch.nn.Module):
             num_head_channels=encoder_num_head_channels,
             use_scale_shift_norm=encoder_use_scale_shift_norm,
             resblock_updown=encoder_resblock_updown,
-            pool=pool
+            pool=pool,
+            num_classes=2 if self.class_cond else None
         )
         
         self.denoised = UNetModel(

@@ -59,7 +59,7 @@ def main():
         data_dir=args.data_dir,
         dataset=args.dataset,
         batch_size=args.batch_size,
-        class_labels=False
+        class_labels=args.class_cond
     )
 
     logger.log("training...")
