@@ -7,11 +7,11 @@ def mse_map(image, target):
 
 class AnomalyDiffusion(SpacedDiffusion):
     def __init__(self, max_t, **kwargs):
-        self.max_origin_t = max_t
-        kwargs["use_timesteps"] = self.filter_timesteps(kwargs["use_timesteps"], self.max_origin_t)
+        kwargs["use_timesteps"] = self.filter_timesteps(kwargs["use_timesteps"], max_t)
         self.max_origin_t = max(kwargs["use_timesteps"])
         
         super().__init__(**kwargs)
+        print(self.num_timesteps)
     
     def ddpm_anomaly_detection(
         self,
@@ -51,6 +51,7 @@ class AnomalyDiffusion(SpacedDiffusion):
             detection_fn = mse_map
         
         max_t = torch.tensor(self.num_timesteps, device=device)
+        print(max_t)
         img_noised = self.q_sample(x_start=img, t=max_t)
         
         for sample in self.p_sample_loop_progressive(
@@ -141,7 +142,11 @@ class AnomalyDiffusion(SpacedDiffusion):
     
     def filter_timesteps(self, origin_steps, max_t):
         
-        filtered_steps = {step for step in origin_steps if step <= max_t}
+        if max_t > 0:
+            filtered_steps = {step for step in origin_steps if step <= max_t}
+        else:
+            #if max_t <= 0, then we don't need to filter
+            filtered_steps = set(origin_steps)
         return filtered_steps    
         
     def visualize_images(self, model, img, groundtruth=None):

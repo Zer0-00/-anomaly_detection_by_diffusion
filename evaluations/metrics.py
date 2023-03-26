@@ -128,7 +128,7 @@ class BratsEvaluator():
         
     def evaluate(self,output_dir):
         with open(os.path.join(output_dir,"metrics.csv"), 'w', newline='') as csvfile:
-            fieldnames = list(self.metrics.keys())
+            fieldnames = ['file_name']+list(self.metrics.keys())
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             
@@ -144,15 +144,17 @@ class BratsEvaluator():
                 pred = self.mask_fn(pred)
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
+                metrics_img["file_name"] = file_name
+                
                 writer.writerow(metrics_img)
                 
 def evaluate_Brat(data_folder, output_dir):
     metrics = {
-        "DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
-        "DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
+        #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
+        #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
         "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT"),
-        "AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
-        "AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
+        #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
+        #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
         "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
     }
     
@@ -164,5 +166,5 @@ def evaluate_Brat(data_folder, output_dir):
     evaluator.evaluate(output_dir)
     
 if __name__ == "__main__":
-    evaluate_Brat('output/configs3/anomaly_detection','output/configs3/anomaly_detection')
+    evaluate_Brat('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
     

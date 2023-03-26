@@ -50,7 +50,7 @@ def main():
         class_labels=True,
         dataset=args.dataset,
         deterministic=True,
-        limited_num=-1
+        limited_num=-1,
     )
 
     all_zs = []
@@ -62,8 +62,11 @@ def main():
 
             labels = extra["y"].to(dist_util.dev())
             img_batch = imgs.to(dist_util.dev())
+            model_kwargs = {}
+            if args.class_cond:
+                model_kwargs["y"] = labels
             
-            z = model.get_embbed((img_batch))
+            z = model.get_embbed((img_batch), **model_kwargs)
             
             gathered_zs = [th.zeros_like(z) for _ in range(dist.get_world_size())]
             dist.all_gather(gathered_zs, z)  # gather not supported with NCCL

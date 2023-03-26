@@ -375,7 +375,7 @@ def anomaly_diffusion_defaults():
         predict_xstart=False,
         rescale_timesteps=False,
         rescale_learned_sigmas=False,
-        max_t=500
+        max_t=-1,
     )
     return defaults
 
