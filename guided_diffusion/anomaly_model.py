@@ -11,7 +11,6 @@ class AnomalyDiffusion(SpacedDiffusion):
         self.max_origin_t = max(kwargs["use_timesteps"])
         
         super().__init__(**kwargs)
-        print(self.num_timesteps)
     
     def ddpm_anomaly_detection(
         self,

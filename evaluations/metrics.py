@@ -146,6 +146,10 @@ class BratsEvaluator():
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
                 metrics_img["file_name"] = file_name
                 
+                #filter the images that have no anomalies
+                if metrics_img["AUROC_WT"] == -1:
+                    continue
+                
                 writer.writerow(metrics_img)
                 
 def evaluate_Brat(data_folder, output_dir):
