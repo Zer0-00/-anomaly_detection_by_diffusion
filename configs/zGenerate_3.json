@@ -20,4 +20,5 @@
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "dataset": "brats2020",
     "model_path": "output/configs3/diffusion/ema_0.9999_050000.pt"
+    
 }
