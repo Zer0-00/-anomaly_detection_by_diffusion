@@ -99,7 +99,7 @@ def create_decoupled_model_and_diffusion(
     rescale_timesteps=False,
     rescale_learned_sigmas=False,
     timestep_respacing="",
-    max_t=500,
+    max_t=-1,
     class_cond=False,  
 ):
     diffusion = create_anomaly_gaussian_diffusion(
@@ -156,7 +156,7 @@ def create_anomaly_gaussian_diffusion(
     rescale_timesteps=False,
     rescale_learned_sigmas=False,
     timestep_respacing="",
-    max_t=500,
+    max_t=-1,
 ):
     betas = gd.get_named_beta_schedule(noise_schedule, steps)
     if use_kl:
