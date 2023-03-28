@@ -9,7 +9,7 @@ import numpy as np
 import torch as th
 import torch.distributed as dist
 import torch.nn.functional as F
-from torch.optim import AdamW
+from torch.optim import Adam
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
 import tqdm
 
@@ -80,7 +80,7 @@ def main():
         model=classifier, use_fp16=args.use_fp16, initial_lg_loss_scale=16.0
     )
     logger.log("creating optimiser")
-    opt = AdamW(mp_trainer.master_params, lr=args.lr, weight_decay=args.weight_decay)
+    opt = Adam(mp_trainer.master_params, lr=args.lr, weight_decay=args.weight_decay)
     
     classifier = DDP(
         classifier,
