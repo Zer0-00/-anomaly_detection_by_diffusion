@@ -182,28 +182,29 @@ class DecoupledDiffusionModel(torch.nn.Module):
         encoder_resblock_updown=False,
         pool='adaptive',
         class_cond=False,
+        emb_combinations='plus',
+        extra_emb_dim=None,
     ):
         super().__init__()
         
         if num_heads_upsample == -1:
             num_heads_upsample = num_heads
-            
-        time_embed_dim = model_channels * 4
         
         #save model parameters
         self.image_size = image_size
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.dropout = dropout
-        self.emb_dim = time_embed_dim
         self.dtype = torch.float16 if use_fp16 else torch.float32
         self.class_cond = class_cond
         
+        extra_emb_dim = extra_emb_dim if extra_emb_dim is not None else model_channels * 4
+                
         self.encoder = EncoderUNetModel(
             image_size=self.image_size,
             in_channels=self.in_channels,
             model_channels=encoder_model_channels,
-            out_channels=self.emb_dim,
+            out_channels=extra_emb_dim,
             num_res_blocks=encoder_num_res_blocks,
             attention_resolutions=encoder_attention_resolutions,
             channel_mult=encoder_channel_mult,
@@ -232,6 +233,8 @@ class DecoupledDiffusionModel(torch.nn.Module):
             use_scale_shift_norm=use_scale_shift_norm,
             resblock_updown=resblock_updown,
             use_new_attention_order=use_new_attention_order,
+            emb_combinations=emb_combinations,
+            extra_emb_dim=extra_emb_dim,
         )
         
     def forward(self, x, timesteps, x0, y=None):

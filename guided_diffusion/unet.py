@@ -422,6 +422,10 @@ class UNetModel(nn.Module):
     :param resblock_updown: use residual blocks for up/downsampling.
     :param use_new_attention_order: use a different attention pattern for potentially
                                     increased efficiency.
+    :param emb_combinations: ways to combine extra embeddings to time embeddings.
+                            choose from (plus, concat)
+    :param extra_emb_dim: number of dimensions for extra embeddings, 
+                          defaults to that of time embeddings. Can not be set when emb_combinations is 'plus'.
     """
 
     def __init__(
@@ -445,6 +449,8 @@ class UNetModel(nn.Module):
         use_scale_shift_norm=False,
         resblock_updown=False,
         use_new_attention_order=False,
+        emb_combinations='plus',
+        extra_emb_dim=None,
     ):
         super().__init__()
 
@@ -466,14 +472,25 @@ class UNetModel(nn.Module):
         self.num_heads = num_heads
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
-
-        self.embed_dim = model_channels * 4
+        self.emb_conbinations = emb_combinations
+        
+        self.time_embed_dim = model_channels * 4
+        self.extra_emb_dim = extra_emb_dim if extra_emb_dim is not None else self.time_embed_dim
+        
+        if self.emb_conbinations == 'concat':
+            if extra_emb_dim is None:
+                self.embed_dim = self.time_embed_dim * 2
+            else:
+                self.embed_dim = self.time_embed_dim + extra_emb_dim
+        else:
+            self.embed_dim = self.time_embed_dim
+        
         self.time_embed = nn.Sequential(
-            linear(model_channels, self.embed_dim),
+            linear(model_channels, self.time_embed_dim),
             nn.SiLU(),
-            linear(self.embed_dim, self.embed_dim),
+            linear(self.time_embed_dim, self.time_embed_dim),
         )
-
+        
         if self.num_classes is not None:
             self.label_emb = nn.Embedding(num_classes, self.embed_dim)
 

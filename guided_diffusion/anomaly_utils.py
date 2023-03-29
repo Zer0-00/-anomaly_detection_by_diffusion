@@ -100,7 +100,9 @@ def create_decoupled_model_and_diffusion(
     rescale_learned_sigmas=False,
     timestep_respacing="",
     max_t=-1,
-    class_cond=False,  
+    class_cond=False,
+    emb_combinations='plus',
+    extra_emb_dim=None,  
 ):
     diffusion = create_anomaly_gaussian_diffusion(
     steps=diffusion_steps,
@@ -141,6 +143,8 @@ def create_decoupled_model_and_diffusion(
         encoder_resblock_updown=encoder_resblock_updown,
         pool=pool,
         class_cond=class_cond,
+        emb_combinations=emb_combinations,
+        extra_emb_dim=extra_emb_dim,
     )
 
     return model, diffusion
@@ -212,7 +216,9 @@ def create_decoupled_model(
     encoder_use_scale_shift_norm=False,
     encoder_resblock_updown=False,
     pool='adaptive',
-    class_cond=False
+    class_cond=False,
+    emb_combinations='plus',
+    extra_emb_dim=None,
 ):
     if channel_mult == "":
         if image_size == 512:
@@ -278,6 +284,8 @@ def create_decoupled_model(
         encoder_resblock_updown=encoder_resblock_updown,
         pool=pool,
         class_cond=class_cond,
+        emb_combinations=emb_combinations,
+        extra_emb_dim=extra_emb_dim,
     )
     
 def create_semantic_encoder(
@@ -361,6 +369,8 @@ def decoupled_diffusion_defaults():
     encoder_resblock_updown=True,
     pool='adaptive',
     class_cond=False,
+    emb_combinations='plus',
+    extra_emb_dim=None,
     )
     
     return defaults
