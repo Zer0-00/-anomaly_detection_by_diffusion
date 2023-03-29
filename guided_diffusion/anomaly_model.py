@@ -182,7 +182,7 @@ class DecoupledDiffusionModel(torch.nn.Module):
         encoder_resblock_updown=False,
         pool='adaptive',
         class_cond=False,
-        emb_combinations='plus',
+        emb_combination='plus',
         extra_emb_dim=None,
     ):
         super().__init__()
@@ -233,7 +233,7 @@ class DecoupledDiffusionModel(torch.nn.Module):
             use_scale_shift_norm=use_scale_shift_norm,
             resblock_updown=resblock_updown,
             use_new_attention_order=use_new_attention_order,
-            emb_combinations=emb_combinations,
+            emb_combination=emb_combination,
             extra_emb_dim=extra_emb_dim,
         )
         

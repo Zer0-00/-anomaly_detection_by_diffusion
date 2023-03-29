@@ -101,7 +101,7 @@ def create_decoupled_model_and_diffusion(
     timestep_respacing="",
     max_t=-1,
     class_cond=False,
-    emb_combinations='plus',
+    emb_combination='plus',
     extra_emb_dim=None,  
 ):
     diffusion = create_anomaly_gaussian_diffusion(
@@ -143,7 +143,7 @@ def create_decoupled_model_and_diffusion(
         encoder_resblock_updown=encoder_resblock_updown,
         pool=pool,
         class_cond=class_cond,
-        emb_combinations=emb_combinations,
+        emb_combination=emb_combination,
         extra_emb_dim=extra_emb_dim,
     )
 
@@ -217,7 +217,7 @@ def create_decoupled_model(
     encoder_resblock_updown=False,
     pool='adaptive',
     class_cond=False,
-    emb_combinations='plus',
+    emb_combination='plus',
     extra_emb_dim=None,
 ):
     if channel_mult == "":
@@ -284,7 +284,7 @@ def create_decoupled_model(
         encoder_resblock_updown=encoder_resblock_updown,
         pool=pool,
         class_cond=class_cond,
-        emb_combinations=emb_combinations,
+        emb_combination=emb_combination,
         extra_emb_dim=extra_emb_dim,
     )
     
@@ -369,7 +369,7 @@ def decoupled_diffusion_defaults():
     encoder_resblock_updown=True,
     pool='adaptive',
     class_cond=False,
-    emb_combinations='plus',
+    emb_combination='plus',
     extra_emb_dim=None,
     )
     
