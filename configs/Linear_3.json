@@ -24,6 +24,6 @@
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "val_data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val",
     "dataset": "brats2020",
-    "model_path": "output/configs3/diffusion/ema_0.9999_150000.pt",
+    "model_path": "output/configs3/diffusion/ema_0.9999_250000.pt",
     "z_state_path": "output/configs3/zGenerate/z_state.npz"
 }

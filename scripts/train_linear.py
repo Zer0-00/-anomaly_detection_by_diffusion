@@ -49,7 +49,7 @@ def main():
     for param in model.parameters():
         param.requires_grad = False
 
-    classifier = th.nn.Linear(model.emb_dim, 1)
+    classifier = th.nn.Linear(model.encoder.out_channels, 1)
     classifier.to(dist_util.dev())
     
     if args.use_fp16:
