@@ -8,7 +8,7 @@
     "weight_decay":0.0,
     "save_interval":300,
 
-    "output_dir": "./output/configs3/Linear",
+    "output_dir": "./output/configs4/Linear",
     
     "image_size": 256,
     "in_channels": 4,
@@ -27,6 +27,6 @@
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "val_data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val",
     "dataset": "brats2020",
-    "model_path": "output/configs3/diffusion/ema_0.9999_050000.pt",
-    "z_state_path": "output/configs3/zGenerate/z_state.npz"
+    "model_path": "output/configs4/diffusion/ema_0.9999_050000.pt",
+    "z_state_path": "output/configs4/zGenerate/z_state.npz"
 }

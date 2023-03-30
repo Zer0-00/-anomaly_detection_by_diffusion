@@ -101,8 +101,11 @@ def main():
         batch = batch.to(dist_util.dev())
         for i, (sub_batch, sub_labels) in enumerate(
             split_microbatches(args.microbatch, batch, labels)
-        ):   
-            z = model.get_embbed((sub_batch))
+        ):  
+            model_kwargs = {}
+            if args.class_cond:
+                model_kwargs["y"] = labels
+            z = model.get_embbed(sub_batch, **model_kwargs)
             z = (z - z_mean)/z_std
             logits = classifier(z)
             

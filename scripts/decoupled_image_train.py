@@ -15,10 +15,6 @@ from guided_diffusion.script_util import (
     NUM_CLASSES
 )
 from guided_diffusion.anomaly_utils import (
-    anomaly_diffusion_and_model_defaults,
-    semantic_encoder_defaults,
-    create_anomaly_model_and_diffusion,
-    create_semantic_encoder,
     decoupled_diffusion_and_diffusion_defaults,
     create_decoupled_model_and_diffusion
 )
