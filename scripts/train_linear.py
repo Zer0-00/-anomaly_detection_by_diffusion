@@ -104,7 +104,7 @@ def main():
         ):  
             model_kwargs = {}
             if args.class_cond:
-                model_kwargs["y"] = labels
+                model_kwargs["y"] = sub_labels
             z = model.get_embbed(sub_batch, **model_kwargs)
             z = (z - z_mean)/z_std
             preds = classifier(z)
@@ -112,9 +112,8 @@ def main():
             loss = F.binary_cross_entropy_with_logits(preds.squeeze(), sub_labels.to(th.float32), reduction="none")
             losses = {}
             losses[f"{prefix}_loss"] = loss.detach()
-            logits = F.sigmoid(preds)
-            losses[f"{prefix}_acc@1"] = compute_top_k(
-                logits, sub_labels, k=1, reduction="none"
+            losses[f"{prefix}_acc@1"] = compute_accuracy(
+                preds, sub_labels, reduction="none"
             )
             log_loss_dict(losses)
             del losses
@@ -179,6 +178,12 @@ def compute_top_k(logits, labels, k, reduction="mean"):
     elif reduction == "none":
         return (top_ks == labels[:, None]).float().sum(dim=-1)
 
+def compute_accuracy(preds, labels, reduction="mean"):
+    pred_labels = preds > 0
+    if reduction == "mean":
+        return (pred_labels == labels[:, None]).float().sum(dim=-1).mean().item()
+    elif reduction == "none":
+        return (pred_labels == labels[:, None]).float().sum(dim=-1)
     
 def log_loss_dict(losses):
     for k, v in losses.items():
