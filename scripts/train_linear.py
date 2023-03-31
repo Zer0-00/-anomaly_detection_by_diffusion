@@ -107,11 +107,12 @@ def main():
                 model_kwargs["y"] = labels
             z = model.get_embbed(sub_batch, **model_kwargs)
             z = (z - z_mean)/z_std
-            logits = classifier(z)
+            preds = classifier(z)
             
-            loss = F.binary_cross_entropy_with_logits(logits.squeeze(), sub_labels.to(th.float32), reduction="none")
+            loss = F.binary_cross_entropy_with_logits(preds.squeeze(), sub_labels.to(th.float32), reduction="none")
             losses = {}
             losses[f"{prefix}_loss"] = loss.detach()
+            logits = F.sigmoid(preds)
             losses[f"{prefix}_acc@1"] = compute_top_k(
                 logits, sub_labels, k=1, reduction="none"
             )
@@ -123,7 +124,7 @@ def main():
                     mp_trainer.zero_grad()
                 mp_trainer.backward(loss * len(sub_batch) / len(batch))
             
-            lg_healthy = logits[th.where(sub_labels == 0)]
+            lg_healthy = preds[th.where(sub_labels == 0)]
             gathered_lg = [th.zeros_like(lg_healthy) for _ in range(dist.get_world_size())]
             dist.all_gather(gathered_lg, lg_healthy)  # gather not supported with NCCL
             lgs_healthy.extend([lg_healthy.cpu().numpy() for lg_healthy in gathered_lg])
