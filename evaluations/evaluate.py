@@ -58,21 +58,23 @@ def evaluate_image(image_path, save_dir):
     generated = data[None,0,:,:,5:]*1.0
     pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(3))
     pred = nonzero_masking(img, pred)
-    #pred = (pred - pred.min())/(pred.max()-pred.min())
+    pred = (pred - pred.min())/(pred.max()-pred.min())
     
-    plt.subplot(2,2,1)
-    plt.imshow(img[0,:,:,0].squeeze(),cmap='gray')
-    plt.axis('off')
-    plt.title('image')
-    plt.subplot(2,2,2)
+    for i in range(4):
+        plt.subplot(3,4,i + 1)
+        plt.imshow(img[0,:,:,i].squeeze(),cmap='gray')
+        plt.axis('off')
+        plt.title(f'image(channel{i})')
+    for i in range(4):
+        plt.subplot(3,4,i + 5)
+        plt.imshow(generated[0,:,:,i].squeeze(), cmap='gray')
+        plt.axis('off')
+        plt.title(f'generated(channel{i})')
+    plt.subplot(3,4,10)
     plt.imshow((seg > 0 * 1.0).squeeze(),cmap='gray')
     plt.axis('off')
     plt.title('ground truth')
-    plt.subplot(2,2,3)
-    plt.imshow(generated[0,:,:,0].squeeze(), cmap='gray')
-    plt.axis('off')
-    plt.title('generated')
-    plt.subplot(2,2,4)
+    plt.subplot(3,4,11)
     plt.imshow(pred.squeeze(), cmap='gray')
     plt.axis('off')
     plt.title('segmentation')
@@ -127,6 +129,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    #evaluate_image("output/configs4/anomaly_detection/samples_25.npy", "output/configs4/anomaly_detection/samples_25.png")
+    evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
     
-    evaluate_z("output/configs3/zGenerate/zs_and_labels.npz", "output/configs3/zGenerate/")
+    #evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
