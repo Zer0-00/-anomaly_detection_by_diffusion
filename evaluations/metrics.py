@@ -175,7 +175,7 @@ class BratsEvaluator():
                 img = data[np.newaxis,0,:,:,:4]*1.0/255.0
                 seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
                 generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
-                pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
+                pred = np.expand_dims(np.sum(np.sqrt((generated-img)**2), axis=3), axis=(-1))
                 pred = nonzero_masking(img, pred)
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
@@ -232,19 +232,7 @@ def evaluate_Brat_images(data_folder, output_dir):
 def calcu_best_thresh(data_folder, output_dir):
     import pandas as pd
     
-    metrics = {
-        #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
-        #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
-        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT"),
-        #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
-        #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
-        "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
-    }
-    
-    evaluator = BratsEvaluator(
-        data_folder=data_folder,
-        metrics=metrics,
-    )
+
     metrics_threshs = {'threshold': []}
     for k in metrics:
         metrics_threshs[k+'(Mean)'] = []
@@ -254,7 +242,20 @@ def calcu_best_thresh(data_folder, output_dir):
         def mask_thresh(pred):
             return (pred >= threshold) * 1.0
         
-        evaluator.mask_fn = mask_thresh
+        metrics = {
+        #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
+        #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_thresh),
+        #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
+        #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
+        "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
+        }
+    
+        evaluator = BratsEvaluator(
+            data_folder=data_folder,
+            metrics=metrics,
+        )
+    
         output_path = os.path.join(output_dir, f"{threshold}")
         metrics_thresh = evaluator.evaluate_images(output_path, store_data=False)
         metrics_threshs['threshold'].append(threshold)
