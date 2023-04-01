@@ -55,7 +55,8 @@ def region_specific_metrics(
 
 def AUROC(
     targets:ImageClass, 
-    images:ImageClass, 
+    images:ImageClass,
+    threshold=50, 
 ):
     """
     calculate AUROC
@@ -63,23 +64,25 @@ def AUROC(
     Args:
         images (torch.Tensor|np.ndarray): input image of (N,1,H,W) or (N,H,W,1)
         targets (torch.Tensor|np.ndarray): ground truth, should share the same shape as input
+        "minimal number of pixel for a anomaly image to be considered as anomalous"
     """
     assert images.shape == targets.shape and type(images) == type(targets),\
          "the input and target images should share the same shape and type"
          
-    
-    if isinstance(images, torch.Tensor):     
-        targets = targets.detach().cpu().to(torch.uint8).numpy().flatten().squeeze()
-        images = images.detach().cpu().numpy().flatten().squeeze()
-    else:
-        targets = targets.flatten().squeeze()
-        images = images.flatten().squeeze()
-    try: 
-        score = roc_auc_score(targets, images)
-    except ValueError:
-        score = -1
+    score = 0
+    for image, target in zip(images, targets):
+        if isinstance(images, torch.Tensor):     
+            target = target.detach().cpu().to(torch.uint8).numpy().flatten().squeeze()
+            image = image.detach().cpu().numpy().flatten().squeeze()
+        else:
+            target = target.flatten().squeeze()
+            image = image.flatten().squeeze()
+        if target.sum() <= threshold:
+            score = -1
+        else: 
+            score+=(roc_auc_score(target, image))
         
-    return score
+    return score/images.shape[0]
 
 def min_max_scale(image:ImageClass):
     return (image - image.min())/(image.max()-image.min())
@@ -144,7 +147,6 @@ class BratsEvaluator():
             writer.writeheader()
                 
         metrics_imgs = {metric:[] for metric in self.metrics}
-        metrics_imgs['threshold'] = []
         
         iterf = tqdm(self.data_files) if  use_tqdm else self.data_files
               
@@ -156,16 +158,10 @@ class BratsEvaluator():
             seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
             generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
             pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
-            pred, mask = nonzero_masking(img, pred, return_mask=True)
-            #thresh, _ = self.mask_fn(pred, mask, return_thresh=True)
-            
-            #mask_fn = partial(self.mask_fn, mask=mask.squeeze(0))
-
-            #self.metrics["DICE_WT"] = partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_fn)
+            pred = nonzero_masking(img, pred)
             
             metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
             metrics_img["file_name"] = file_name
-            #metrics_img['threshold'] = thresh
             
             #filter the images that have no anomalies
             if metrics_img["AUROC_WT"] == -1:
@@ -277,15 +273,15 @@ def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):
         metrics=metrics,
     )
 
-    metrics_thresh = evaluator.evaluate_images(output_dir, store_data=False)
+    metrics_thresh = evaluator.evaluate_images(output_dir, store_data=False, use_tqdm=True)
     for k,v in metrics_thresh.items():
         metrics_threshs[k+'(Mean)'] = v[0]
         metrics_threshs[k+'(Std)'] = v[1]
             
-    df = pd.DataFrame(metrics_threshs)
+    df = pd.DataFrame(metrics_threshs, index=[0])
     output_path = os.path.join(output_dir, "total.csv")
     df.to_csv(output_path)
     
 if __name__ == "__main__":
-    #calcu_best_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
-    finding_threshold('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    #using_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    finding_threshold('output/configs4/anomaly_detection/train','output/configs4/anomaly_detection/train')

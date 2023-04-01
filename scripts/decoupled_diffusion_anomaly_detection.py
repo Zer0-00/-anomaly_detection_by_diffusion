@@ -55,7 +55,7 @@ def main():
             batch_size=args.batch_size,
             dataset=args.dataset,
             deterministic=False,
-            limited_num=-1,
+            limited_num=int(3200/args.batch_size) if args.calcu_thresh else -1,
             test=True,
         )
     
@@ -152,6 +152,7 @@ def create_argparser():
         median_path="",
         random_seed=1126,
         shifting_z=False,
+        calcu_thresh=False,
     )
     defaults.update(decoupled_diffusion_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
