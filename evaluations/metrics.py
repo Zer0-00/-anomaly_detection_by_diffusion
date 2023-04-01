@@ -166,7 +166,7 @@ class BratsEvaluator():
         else:
             metrics_imgs = {metric:[] for metric in self.metrics}
                 
-            for file_name in tqdm(self.data_files):
+            for file_name in self.data_files:
                 file_dir = os.path.join(self.data_folder, file_name)
                 data = np.load(file_dir)
                 
@@ -249,7 +249,7 @@ def calcu_best_thresh(data_folder, output_dir):
         metrics_threshs[k+'(Mean)'] = []
         metrics_threshs[k+'(Std)'] = []
     
-    for threshold in np.arange(0,0.5,0.005):
+    for threshold in tqdm(np.arange(0,0.5,0.005)):
         def mask_thresh(pred):
             return (pred >= threshold) * 1.0
         
