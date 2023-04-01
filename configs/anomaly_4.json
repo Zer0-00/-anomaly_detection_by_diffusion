@@ -21,7 +21,7 @@
     "encoder_use_scale_shift_norm": "False",
     "class_cond": "True",
 
-    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
+    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val",
     "dataset": "brats2020",
     "model_path": "output/configs4/diffusion/ema_0.9999_200000.pt"
 }
