@@ -4,6 +4,7 @@ import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
 import os
+import cv2
 
 from metrics import nonzero_masking
 
@@ -58,9 +59,11 @@ def evaluate_image(image_path, save_dir):
     seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
     generated = data[None,0,:,:,5:]
     #change from (0,255) to (0,1)
-    pred = np.expand_dims(np.sum((generated*1.0 / 255-img*1.0 / 255)**2, axis=3), axis=(3))
+    pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
     pred = nonzero_masking(img, pred)
-    pred = (pred - pred.min())/(pred.max()-pred.min())
+    pred = (pred * 255.0).astype(np.uint8).squeeze()
+    _, pred = cv2.threshold(pred, 0, 255, cv2.THRESH_OTSU)
+    pred = pred[None, ..., None]
     
     for i in range(4):
         plt.subplot(3,4,i + 1)
@@ -81,7 +84,7 @@ def evaluate_image(image_path, save_dir):
     plt.axis('off')
     plt.title('segmentation')
     plt.subplot(3,4,12)
-    plt.imshow(pred.squeeze().astype(np.uint8), cmap='Spectral_r', alpha=0.5)
+    plt.imshow(pred.squeeze().astype(np.uint8), cmap='gist_heat', alpha=0.5)
     plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
     plt.axis('off')
     plt.title('image+segmentation')
@@ -136,6 +139,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    #evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
+    evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
     
-    evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
+    #evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")

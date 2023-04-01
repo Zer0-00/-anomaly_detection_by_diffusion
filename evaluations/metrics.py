@@ -122,10 +122,10 @@ class BratsEvaluator():
         data_folder,
         metrics,
         mask_fn=None,
-    ):
+    ):  
         self.data_folder = data_folder
         self.metrics = metrics
-        self.mask_fn = lambda x: x if mask_fn is None else mask_fn
+        self.mask_fn = (lambda x: x) if mask_fn is None else mask_fn
         
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
@@ -135,7 +135,7 @@ class BratsEvaluator():
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
             csvfile = open(os.path.join(output_dir,"metrics.csv"), 'w', newline='')
-            fieldnames = ['file_name']+list(self.metrics.keys())
+            fieldnames = ['file_name', 'threshold']+list(self.metrics.keys())
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
                 
@@ -150,7 +150,7 @@ class BratsEvaluator():
             img = data[np.newaxis,0,:,:,:4]*1.0/255.0
             seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
             generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
-            pred = np.expand_dims(np.sum(np.sqrt((generated-img)**2), axis=3))
+            pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
             pred = nonzero_masking(img, pred)
             thresh, _ = self.mask_fn(pred)
             
@@ -192,11 +192,15 @@ def evaluate_Brat_images(data_folder, output_dir):
     import pandas as pd
     
     def mask_fn(pred):
-        thresh ,mask = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
+        pred = (pred * 255.0).astype(np.uint8).squeeze()
+        thresh ,mask = cv2.threshold(pred, 0, 255, cv2.THRESH_OTSU)
+        mask = mask[None, ..., None]
         return thresh, mask
     
     def mask_dice(pred):
-        _, mask = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
+        pred = (pred * 255.0).astype(np.uint8).squeeze()
+        _, mask = cv2.threshold(pred, 0, 255, cv2.THRESH_OTSU)
+        mask = mask[None, ..., None]
         return mask
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
@@ -212,7 +216,7 @@ def evaluate_Brat_images(data_folder, output_dir):
         metrics=metrics,
         mask_fn=mask_fn
     )
-    metrics_thresh = evaluator.evaluate_images(output_dir, tqdm=True)
+    metrics_thresh = evaluator.evaluate_images(output_dir, use_tqdm=True)
     df = pd.DataFrame(metrics_thresh)
     output_path = os.path.join(output_dir, "total.csv")
     df.to_csv(output_path)
