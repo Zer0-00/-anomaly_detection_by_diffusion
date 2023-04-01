@@ -84,7 +84,7 @@ def AUROC(
 def min_max_scale(image:ImageClass):
     return (image - image.min())/(image.max()-image.min())
 
-def nonzero_masking(images:ImageClass, targets:ImageClass):
+def nonzero_masking(images:ImageClass, targets:ImageClass, return_mask=False):
     """
     masking targets according to the non-zero pixels of images
      
@@ -94,6 +94,7 @@ def nonzero_masking(images:ImageClass, targets:ImageClass):
     Args:
         images (torch.Tensor|np.ndarray): input image of (N,1,H,W) or (N,H,W,1)
         targets (torch.Tensor|np.ndarray): ground truth, should share the same shape as input
+        return_mask (bool): whether to return the mask
     """
     assert type(images) == type(targets),\
         "the input and target images should share the same and type"
@@ -112,7 +113,10 @@ def nonzero_masking(images:ImageClass, targets:ImageClass):
     
     targets = targets * mask + targets.min() * (1 - mask)
     
-    return targets
+    if return_mask:
+        return targets, mask
+    else:
+        return targets
         
     
 
@@ -151,8 +155,10 @@ class BratsEvaluator():
             seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
             generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
             pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
-            pred = nonzero_masking(img, pred)
-            thresh, _ = self.mask_fn(pred)
+            pred, mask = nonzero_masking(img, pred, return_mask=True)
+            thresh, _ = self.mask_fn(pred, mask, return_thresh=True)
+
+            self.metrics["DICE_WT"] = partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=self.mask_fn),
             
             metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
             metrics_img["file_name"] = file_name
@@ -191,21 +197,20 @@ def evaluate_Brat_images(data_folder, output_dir):
     import cv2
     import pandas as pd
     
-    def mask_fn(pred):
-        pred = (pred * 255.0).astype(np.uint8).squeeze()
-        thresh ,mask = cv2.threshold(pred, 0, 255, cv2.THRESH_OTSU)
-        mask = mask[None, ..., None]
-        return thresh, mask
-    
-    def mask_dice(pred):
-        pred = (pred * 255.0).astype(np.uint8).squeeze()
-        _, mask = cv2.threshold(pred, 0, 255, cv2.THRESH_OTSU)
-        mask = mask[None, ..., None]
-        return mask
+    def mask_fn(pred, mask, return_thresh=False):
+        masked_pred = pred[np.where(mask > 0)].reshape(1, -1)
+        masked_pred = (masked_pred * 255.0).astype(np.uint8).squeeze()
+        thresh ,_ = cv2.threshold(masked_pred, 0, 255, cv2.THRESH_OTSU)
+        thresh = thresh/255.0
+        pred = (pred > thresh) * 1.0
+        if return_thresh:
+            return thresh, pred
+        else:
+            return pred
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
-        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_dice),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_fn),
         #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
         #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
         "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
