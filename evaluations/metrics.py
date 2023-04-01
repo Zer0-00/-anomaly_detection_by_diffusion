@@ -5,6 +5,7 @@ from typing import Union
 import os
 import csv
 from functools import partial
+from tqdm import tqdm
 
 ImageClass = Union[torch.Tensor,np.ndarray]
 
@@ -126,15 +127,46 @@ class BratsEvaluator():
         self.mask_fn = mask_fn if mask_fn is not None else min_max_scale
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
-    def evaluate_images(self,output_dir):
-        with open(os.path.join(output_dir,"metrics.csv"), 'w', newline='') as csvfile:
-            fieldnames = ['file_name']+list(self.metrics.keys())
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            
+    def evaluate_images(self,output_dir, store_data=True):
+        
+        if store_data:
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            with open(os.path.join(output_dir,"metrics.csv"), 'w', newline='') as csvfile:
+                fieldnames = ['file_name']+list(self.metrics.keys())
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                
+                metrics_imgs = {metric:[] for metric in self.metrics}
+                
+                for file_name in tqdm(self.data_files):
+                    file_dir = os.path.join(self.data_folder, file_name)
+                    data = np.load(file_dir)
+                    
+                    img = data[np.newaxis,0,:,:,:4]*1.0/255.0
+                    seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
+                    generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
+                    pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
+                    pred = nonzero_masking(img, pred)
+                    pred = self.mask_fn(pred)
+                    
+                    metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
+                    metrics_img["file_name"] = file_name
+                    #metrics_img['threshold'] = thresh
+                    
+                    #filter the images that have no anomalies
+                    if metrics_img["AUROC_WT"] == -1:
+                        continue
+                    
+                    writer.writerow(metrics_img)
+                    
+                    for key in metrics_imgs:
+                        metrics_imgs[key].append(metrics_img[key])
+        
+        else:
             metrics_imgs = {metric:[] for metric in self.metrics}
-            
-            for file_name in self.data_files:
+                
+            for file_name in tqdm(self.data_files):
                 file_dir = os.path.join(self.data_folder, file_name)
                 data = np.load(file_dir)
                 
@@ -147,18 +179,18 @@ class BratsEvaluator():
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
                 metrics_img["file_name"] = file_name
+                #metrics_img['threshold'] = thresh
                 
                 #filter the images that have no anomalies
                 if metrics_img["AUROC_WT"] == -1:
                     continue
                 
-                writer.writerow(metrics_img)
-                
                 for key in metrics_imgs:
                     metrics_imgs[key].append(metrics_img[key])
-                    
-            metrics = {k:(np.mean(v), np.std(v)) for k,v in metrics_imgs.items()}
-            return metrics
+        
+                        
+        metrics = {k:(np.mean(v), np.std(v)) for k,v in metrics_imgs.items()}
+        return metrics
                 
     def evaluate(self,seg, pred, extra_data=None):
         metrics = {metric:metrics_fn(seg,pred) for metric,metrics_fn in self.metrics.items()}
@@ -174,6 +206,12 @@ def evaluate_Brat_images(data_folder, output_dir):
         data_folder: generated results folder
         output_dir: output directory
     """
+    import cv2
+    import pandas as pd
+    
+    def mask_fn(pred):
+        masked, thresh = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
+        return masked, thresh
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
@@ -186,9 +224,9 @@ def evaluate_Brat_images(data_folder, output_dir):
     evaluator = BratsEvaluator(
         data_folder=data_folder,
         metrics=metrics,
+        mask_fn=mask_fn
     )
-    
-    evaluator.evaluate_images(output_dir)
+    metrics_thresh = evaluator.evaluate_images(output_dir)
     
 def calcu_best_thresh(data_folder, output_dir):
     import pandas as pd
@@ -211,13 +249,13 @@ def calcu_best_thresh(data_folder, output_dir):
         metrics_threshs[k+'(Mean)'] = []
         metrics_threshs[k+'(Std)'] = []
     
-    for threshold in np.arange(0,1,0.02):
+    for threshold in np.arange(0,0.5,0.005):
         def mask_thresh(pred):
             return (pred >= threshold) * 1.0
         
         evaluator.mask_fn = mask_thresh
         output_path = os.path.join(output_dir, f"{threshold}")
-        metrics_thresh = evaluator.evaluate_images(output_path)
+        metrics_thresh = evaluator.evaluate_images(output_path, store_data=False)
         metrics_threshs['threshold'].append(threshold)
         for k,v in metrics_thresh.items():
             metrics_threshs[k+'(Mean)'].append(v[0])
@@ -229,4 +267,4 @@ def calcu_best_thresh(data_folder, output_dir):
     
 if __name__ == "__main__":
     calcu_best_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
-    
+    #evaluate_Brat_images('output/configs4/anomaly_detection','output/configs4/anomaly_detection')

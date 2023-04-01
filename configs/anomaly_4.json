@@ -5,7 +5,7 @@
 
     "timestep_respacing":"ddim25",
     "use_ddim": "True",
-    "max_t": 500,
+    "max_t": 700,
 
     "image_size": 256,
     "in_channels": 4,
