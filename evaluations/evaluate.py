@@ -53,7 +53,7 @@ def evaluate_training(progress_dir, save_dir):
 def evaluate_image(image_path, save_dir):
     data = np.load(image_path)
                 
-    img = data[None,0,:,:,:4]*1.0
+    img = data[None,0,:,:,:4]
     seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
     generated = data[None,0,:,:,5:]*1.0
     pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(3))
@@ -62,22 +62,27 @@ def evaluate_image(image_path, save_dir):
     
     for i in range(4):
         plt.subplot(3,4,i + 1)
-        plt.imshow(img[0,:,:,i].squeeze(),cmap='gray')
+        plt.imshow(img[0,:,:,i].squeeze().astype(np.uint8),cmap='gray')
         plt.axis('off')
         plt.title(f'image(channel{i})')
     for i in range(4):
         plt.subplot(3,4,i + 5)
-        plt.imshow(generated[0,:,:,i].squeeze(), cmap='gray')
+        plt.imshow(generated[0,:,:,i].squeeze().astype(np.uint8), cmap='gray')
         plt.axis('off')
         plt.title(f'generated(channel{i})')
     plt.subplot(3,4,10)
-    plt.imshow((seg > 0 * 1.0).squeeze(),cmap='gray')
+    plt.imshow((seg > 0 * 1.0).squeeze().astype(np.uint8),cmap='gray')
     plt.axis('off')
     plt.title('ground truth')
     plt.subplot(3,4,11)
-    plt.imshow(pred.squeeze(), cmap='gray')
+    plt.imshow(pred.squeeze().astype(np.uint8), cmap='gray')
     plt.axis('off')
     plt.title('segmentation')
+    plt.subplot(3,4,12)
+    plt.imshow(pred.squeeze().astype(np.uint8), cmap='Spectral_r', alpha=0.5)
+    plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
+    plt.axis('off')
+    plt.title('image+segmentation')
     plt.savefig(save_dir)
     plt.close
     

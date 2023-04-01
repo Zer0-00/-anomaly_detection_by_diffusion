@@ -126,11 +126,13 @@ class BratsEvaluator():
         self.mask_fn = mask_fn if mask_fn is not None else min_max_scale
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
-    def evaluate(self,output_dir):
+    def evaluate_images(self,output_dir):
         with open(os.path.join(output_dir,"metrics.csv"), 'w', newline='') as csvfile:
             fieldnames = ['file_name']+list(self.metrics.keys())
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
+            
+            metrics_imgs = {metric:[] for metric in self.metrics}
             
             for file_name in self.data_files:
                 file_dir = os.path.join(self.data_folder, file_name)
@@ -152,7 +154,26 @@ class BratsEvaluator():
                 
                 writer.writerow(metrics_img)
                 
-def evaluate_Brat(data_folder, output_dir):
+                for key in metrics_imgs:
+                    metrics_imgs[key].append(metrics_img[key])
+                    
+            metrics = {k:(np.mean(v), np.std(v)) for k,v in metrics_imgs.items()}
+            return metrics
+                
+    def evaluate(self,seg, pred, extra_data=None):
+        metrics = {metric:metrics_fn(seg,pred) for metric,metrics_fn in self.metrics.items()}
+        if extra_data is not None:
+            metrics.update(extra_data)
+            
+        return metrics
+                
+def evaluate_Brat_images(data_folder, output_dir):
+    """evaluate prediction generated from images from Brats dataset
+
+    Args:
+        data_folder: generated results folder
+        output_dir: output directory
+    """
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
@@ -167,8 +188,45 @@ def evaluate_Brat(data_folder, output_dir):
         metrics=metrics,
     )
     
-    evaluator.evaluate(output_dir)
+    evaluator.evaluate_images(output_dir)
+    
+def calcu_best_thresh(data_folder, output_dir):
+    import pandas as pd
+    
+    metrics = {
+        #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
+        #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT"),
+        #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
+        #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
+        "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
+    }
+    
+    evaluator = BratsEvaluator(
+        data_folder=data_folder,
+        metrics=metrics,
+    )
+    metrics_threshs = {'threshold': []}
+    for k in metrics:
+        metrics_threshs[k+'(Mean)'] = []
+        metrics_threshs[k+'(Std)'] = []
+    
+    for threshold in range(0,25000,500):
+        def mask_thresh(pred):
+            return (pred >= threshold) * 1.0
+        
+        evaluator.mask_fn = mask_thresh
+        output_path = os.path.join(output_dir, f"{threshold}")
+        metrics_thresh = evaluator.evaluate_images(output_path)
+        metrics_threshs['threshold'].append(threshold)
+        for k,v in metrics_thresh.items():
+            metrics_threshs[k+'(Mean)'].append(v[0])
+            metrics_threshs[k+'(Std)'].append(v[1])
+            
+    df = pd.DataFrame(metrics_threshs)
+    output_path = os.path.join(output_dir, "total.csv")
+    df.to_csv(output_path)
     
 if __name__ == "__main__":
-    evaluate_Brat('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    calcu_best_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
     
