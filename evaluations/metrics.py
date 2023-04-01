@@ -138,9 +138,9 @@ class BratsEvaluator():
                 file_dir = os.path.join(self.data_folder, file_name)
                 data = np.load(file_dir)
                 
-                img = data[np.newaxis,0,:,:,:4]*1.0
+                img = data[np.newaxis,0,:,:,:4]*1.0/255.0
                 seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
-                generated = data[np.newaxis,0,:,:,5:]*1.0
+                generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
                 pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
                 pred = nonzero_masking(img, pred)
                 pred = self.mask_fn(pred)
@@ -211,7 +211,7 @@ def calcu_best_thresh(data_folder, output_dir):
         metrics_threshs[k+'(Mean)'] = []
         metrics_threshs[k+'(Std)'] = []
     
-    for threshold in range(0,25000,500):
+    for threshold in np.arange(0,1,0.02):
         def mask_thresh(pred):
             return (pred >= threshold) * 1.0
         

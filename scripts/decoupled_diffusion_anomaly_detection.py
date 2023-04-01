@@ -55,7 +55,7 @@ def main():
             batch_size=args.batch_size,
             dataset=args.dataset,
             deterministic=False,
-            limited_num=2,
+            limited_num=200,
             test=True,
         )
     

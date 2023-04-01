@@ -52,11 +52,13 @@ def evaluate_training(progress_dir, save_dir):
     
 def evaluate_image(image_path, save_dir):
     data = np.load(image_path)
-                
+    
+
     img = data[None,0,:,:,:4]
     seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
-    generated = data[None,0,:,:,5:]*1.0
-    pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(3))
+    generated = data[None,0,:,:,5:]
+    #change from (0,255) to (0,1)
+    pred = np.expand_dims(np.sum((generated*1.0 / 255-img*1.0 / 255)**2, axis=3), axis=(3))
     pred = nonzero_masking(img, pred)
     pred = (pred - pred.min())/(pred.max()-pred.min())
     
@@ -134,6 +136,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
+    #evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
     
-    #evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
+    evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
