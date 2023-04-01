@@ -11,7 +11,8 @@ ImageClass = Union[torch.Tensor,np.ndarray]
 
 def dice_coeff(
     targets:ImageClass, 
-    images:ImageClass, 
+    images:ImageClass,
+    mask_fn:function,
     epsilon=1e-6
 ):
     """
@@ -27,6 +28,7 @@ def dice_coeff(
     dice = 0
     dot_fn = torch.dot if type(images) == torch.Tensor else np.dot
     for image, target in zip(images, targets):
+        image = mask_fn(image)
         dot = dot_fn(image.reshape(-1), target.reshape(-1))
         sum = image.sum() + target.sum()
         dice += (2 * dot + epsilon) / (sum + epsilon)
@@ -175,7 +177,6 @@ class BratsEvaluator():
                 generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
                 pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
                 pred = nonzero_masking(img, pred)
-                pred = self.mask_fn(pred)
                 
                 metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
                 metrics_img["file_name"] = file_name
@@ -215,7 +216,7 @@ def evaluate_Brat_images(data_folder, output_dir):
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
-        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT"),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_fn),
         #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
         #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
         "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
