@@ -12,7 +12,7 @@ ImageClass = Union[torch.Tensor,np.ndarray]
 def dice_coeff(
     targets:ImageClass, 
     images:ImageClass,
-    mask_fn:function,
+    mask_fn=lambda x:x,
     epsilon=1e-6
 ):
     """
@@ -125,70 +125,51 @@ class BratsEvaluator():
     ):
         self.data_folder = data_folder
         self.metrics = metrics
+        self.mask_fn = lambda x: x if mask_fn is None else mask_fn
         
-        self.mask_fn = mask_fn if mask_fn is not None else min_max_scale
         self.data_files = [file_name for file_name in os.listdir(self.data_folder) if file_name.endswith(".npy")]
         
-    def evaluate_images(self,output_dir, store_data=True):
+    def evaluate_images(self,output_dir, store_data=True, use_tqdm=False):
         
         if store_data:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
-            with open(os.path.join(output_dir,"metrics.csv"), 'w', newline='') as csvfile:
-                fieldnames = ['file_name']+list(self.metrics.keys())
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
+            csvfile = open(os.path.join(output_dir,"metrics.csv"), 'w', newline='')
+            fieldnames = ['file_name']+list(self.metrics.keys())
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
                 
-                metrics_imgs = {metric:[] for metric in self.metrics}
-                
-                for file_name in tqdm(self.data_files):
-                    file_dir = os.path.join(self.data_folder, file_name)
-                    data = np.load(file_dir)
-                    
-                    img = data[np.newaxis,0,:,:,:4]*1.0/255.0
-                    seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
-                    generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
-                    pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(-1))
-                    pred = nonzero_masking(img, pred)
-                    pred = self.mask_fn(pred)
-                    
-                    metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
-                    metrics_img["file_name"] = file_name
-                    #metrics_img['threshold'] = thresh
-                    
-                    #filter the images that have no anomalies
-                    if metrics_img["AUROC_WT"] == -1:
-                        continue
-                    
-                    writer.writerow(metrics_img)
-                    
-                    for key in metrics_imgs:
-                        metrics_imgs[key].append(metrics_img[key])
+        metrics_imgs = {metric:[] for metric in self.metrics}
         
-        else:
-            metrics_imgs = {metric:[] for metric in self.metrics}
-                
-            for file_name in self.data_files:
-                file_dir = os.path.join(self.data_folder, file_name)
-                data = np.load(file_dir)
-                
-                img = data[np.newaxis,0,:,:,:4]*1.0/255.0
-                seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
-                generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
-                pred = np.expand_dims(np.sum(np.sqrt((generated-img)**2), axis=3), axis=(-1))
-                pred = nonzero_masking(img, pred)
-                
-                metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
-                metrics_img["file_name"] = file_name
-                #metrics_img['threshold'] = thresh
-                
-                #filter the images that have no anomalies
-                if metrics_img["AUROC_WT"] == -1:
-                    continue
-                
-                for key in metrics_imgs:
-                    metrics_imgs[key].append(metrics_img[key])
+        iterf = tqdm(self.data_files) if  use_tqdm else self.data_files
+              
+        for file_name in iterf:
+            file_dir = os.path.join(self.data_folder, file_name)
+            data = np.load(file_dir)
+            
+            img = data[np.newaxis,0,:,:,:4]*1.0/255.0
+            seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
+            generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
+            pred = np.expand_dims(np.sum(np.sqrt((generated-img)**2), axis=3))
+            pred = nonzero_masking(img, pred)
+            thresh, _ = self.mask_fn(pred)
+            
+            metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
+            metrics_img["file_name"] = file_name
+            metrics_img['threshold'] = thresh
+            
+            #filter the images that have no anomalies
+            if metrics_img["AUROC_WT"] == -1:
+                continue
+            
+            if store_data:
+                writer.writerow(metrics_img)
+            
+            for key in metrics_imgs:
+                metrics_imgs[key].append(metrics_img[key])
         
+        if store_data:
+            csvfile.close()
                         
         metrics = {k:(np.mean(v), np.std(v)) for k,v in metrics_imgs.items()}
         return metrics
@@ -211,12 +192,16 @@ def evaluate_Brat_images(data_folder, output_dir):
     import pandas as pd
     
     def mask_fn(pred):
-        masked, thresh = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
-        return masked, thresh
+        thresh ,mask = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
+        return thresh, mask
+    
+    def mask_dice(pred):
+        _, mask = cv2.threshold(pred, 0, 1, cv2.THRESH_OTSU)
+        return mask
     metrics = {
         #"DICE_ET": partial(region_specific_metrics, func=dice_coeff, region_type="ET"),
         #"DICE_TC": partial(region_specific_metrics, func=dice_coeff, region_type="TC"),
-        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_fn),
+        "DICE_WT": partial(region_specific_metrics, func=dice_coeff, region_type="WT", mask_fn=mask_dice),
         #"AUROC_ET": partial(region_specific_metrics, func=AUROC, region_type="ET"),
         #"AUROC_TC": partial(region_specific_metrics, func=AUROC, region_type="TC"),
         "AUROC_WT": partial(region_specific_metrics, func=AUROC, region_type="WT"),
@@ -227,7 +212,10 @@ def evaluate_Brat_images(data_folder, output_dir):
         metrics=metrics,
         mask_fn=mask_fn
     )
-    metrics_thresh = evaluator.evaluate_images(output_dir)
+    metrics_thresh = evaluator.evaluate_images(output_dir, tqdm=True)
+    df = pd.DataFrame(metrics_thresh)
+    output_path = os.path.join(output_dir, "total.csv")
+    df.to_csv(output_path)
     
 def calcu_best_thresh(data_folder, output_dir):
     import pandas as pd
@@ -268,5 +256,5 @@ def calcu_best_thresh(data_folder, output_dir):
     df.to_csv(output_path)
     
 if __name__ == "__main__":
-    calcu_best_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
-    #evaluate_Brat_images('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    #calcu_best_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    evaluate_Brat_images('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
