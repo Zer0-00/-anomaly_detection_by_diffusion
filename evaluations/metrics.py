@@ -56,7 +56,7 @@ def region_specific_metrics(
 def AUROC(
     targets:ImageClass, 
     images:ImageClass,
-    threshold=50, 
+    threshold=200, 
 ):
     """
     calculate AUROC
@@ -283,5 +283,5 @@ def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):
     df.to_csv(output_path)
     
 if __name__ == "__main__":
-    #using_thresh('output/configs4/anomaly_detection','output/configs4/anomaly_detection')
+    #using_thresh('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection', thresh=0.0817678607279089)
     finding_threshold('output/configs4/anomaly_detection/train','output/configs4/anomaly_detection/train')

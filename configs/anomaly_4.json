@@ -6,7 +6,7 @@
 
     "timestep_respacing":"ddim25",
     "use_ddim": "True",
-    "max_t": 500,
+    "max_t": 700,
 
     "image_size": 256,
     "in_channels": 4,
@@ -24,5 +24,5 @@
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
     "dataset": "brats2020",
-    "model_path": "output/configs4/diffusion/ema_0.9999_200000.pt"
+    "model_path": "output/configs4/diffusion/ema_0.9999_250000.pt"
 }
