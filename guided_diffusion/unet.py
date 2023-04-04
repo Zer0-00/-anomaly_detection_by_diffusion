@@ -169,6 +169,7 @@ class ResBlock(TimestepBlock):
         use_checkpoint=False,
         up=False,
         down=False,
+        extra_emb_channels=None,
     ):
         super().__init__()
         self.channels = channels
@@ -178,6 +179,7 @@ class ResBlock(TimestepBlock):
         self.use_conv = use_conv
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
+        self.extra_emb_channels = extra_emb_channels
 
         self.in_layers = nn.Sequential(
             normalization(channels),
@@ -203,6 +205,15 @@ class ResBlock(TimestepBlock):
                 2 * self.out_channels if use_scale_shift_norm else self.out_channels,
             ),
         )
+        if self.extra_emb_channels is not None:
+            self.extra_emb_layers = nn.Sequential(
+                nn.SiLU(),
+                linear(
+                    self.extra_emb_channels,
+                    2 * self.out_channels if use_scale_shift_norm else self.out_channels,
+                ),
+            )    
+        
         self.out_layers = nn.Sequential(
             normalization(self.out_channels),
             nn.SiLU(),
@@ -221,7 +232,7 @@ class ResBlock(TimestepBlock):
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
-    def forward(self, x, emb):
+    def forward(self, x, emb, extra_emb=None):
         """
         Apply the block to a Tensor, conditioned on a timestep embedding.
 
@@ -230,10 +241,10 @@ class ResBlock(TimestepBlock):
         :return: an [N x C x ...] Tensor of outputs.
         """
         return checkpoint(
-            self._forward, (x, emb), self.parameters(), self.use_checkpoint
+            self._forward, (x, emb, extra_emb), self.parameters(), self.use_checkpoint
         )
 
-    def _forward(self, x, emb):
+    def _forward(self, x, emb, extra_emb=None):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -245,13 +256,22 @@ class ResBlock(TimestepBlock):
         emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
+        if self.extra_emb_channels is not None: 
+            extra_emb_out = self.extra_emb_layers(extra_emb).type(h.dtype)    
+            while len(extra_emb_out.shape) < len(h.shape):
+                extra_emb_out = extra_emb_out[..., None]
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = th.chunk(emb_out, 2, dim=1)
             h = out_norm(h) * (1 + scale) + shift
+            if self.extra_emb_channels is not None:
+                extra_scale, extra_shift = th.chunk(extra_emb_out, 2, dim=1)
+                h = h * (1 + extra_scale) + extra_shift
             h = out_rest(h)
         else:
             h = h + emb_out
+            if self.extra_emb_channels is not None:
+                h = extra_emb_out
             h = self.out_layers(h)
         return self.skip_connection(x) + h
 
@@ -511,6 +531,7 @@ class UNetModel(nn.Module):
                         dims=dims,
                         use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm,
+                        extra_emb_channels=self.extra_emb_dim
                     )
                 ]
                 ch = int(mult * model_channels)
@@ -540,6 +561,7 @@ class UNetModel(nn.Module):
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
                             down=True,
+                            extra_emb_channels=self.extra_emb_dim
                         )
                         if resblock_updown
                         else Downsample(
@@ -560,6 +582,7 @@ class UNetModel(nn.Module):
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
+                extra_emb_channels=self.extra_emb_dim
             ),
             AttentionBlock(
                 ch,
@@ -575,6 +598,7 @@ class UNetModel(nn.Module):
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
+                extra_emb_channels=self.extra_emb_dim
             ),
         )
         self._feature_size += ch
@@ -592,6 +616,7 @@ class UNetModel(nn.Module):
                         dims=dims,
                         use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm,
+                        extra_emb_channels=self.extra_emb_dim
                     )
                 ]
                 ch = int(model_channels * mult)
@@ -617,6 +642,7 @@ class UNetModel(nn.Module):
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
                             up=True,
+                            extra_emb_channels=self.extra_emb_dim,
                         )
                         if resblock_updown
                         else Upsample(ch, conv_resample, dims=dims, out_channels=out_ch)
