@@ -121,7 +121,9 @@ def nonzero_masking(images:ImageClass, targets:ImageClass, return_mask=False):
     else:
         return targets
         
-    
+def remove_noise(image):
+    mask = (image >= np.percentile(image, 1)) * (image <= np.percentile(image, 99)) * 1.0
+    return image * mask
 
 class BratsEvaluator():
     def __init__(
@@ -158,6 +160,8 @@ class BratsEvaluator():
             seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
             generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
             pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
+            
+            
             pred = nonzero_masking(img, pred)
             
             metrics_img = {metric: metric_fn(seg,pred) for metric, metric_fn in self.metrics.items()}
@@ -194,6 +198,7 @@ class BratsEvaluator():
             seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
             generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
             pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
+            pred = remove_noise(pred)
             pred, mask = nonzero_masking(img, pred, return_mask=True)
             thresh, _ = self.mask_fn(pred, mask, return_thresh=True)
             
@@ -254,6 +259,7 @@ def finding_threshold(data_folder, output_dir):
     df = pd.DataFrame(metrics_output, index=[0])
     output_path = os.path.join(output_dir, "total.csv")
     df.to_csv(output_path)
+    print(df)
     
 def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):
     import pandas as pd
@@ -281,7 +287,8 @@ def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):
     df = pd.DataFrame(metrics_threshs, index=[0])
     output_path = os.path.join(output_dir, "total.csv")
     df.to_csv(output_path)
+    print(df)
     
 if __name__ == "__main__":
-    #using_thresh('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection', thresh=0.0817678607279089)
-    finding_threshold('output/configs4/anomaly_detection/train','output/configs4/anomaly_detection/train')
+    #using_thresh('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection', thresh=0.03933)
+    finding_threshold('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection/val')

@@ -1,12 +1,12 @@
 {
     "batch_size": 16,
-    "calcu_thresh": "True",
+    "calcu_thresh": "False",
 
-    "output_dir": "./output/configs4/anomaly_detection/train",
+    "output_dir": "./output/configs4/anomaly_detection/val",
 
     "timestep_respacing":"ddim25",
     "use_ddim": "True",
-    "max_t": 700,
+    "max_t": 900,
 
     "image_size": 256,
     "in_channels": 4,
@@ -22,7 +22,7 @@
     "encoder_use_scale_shift_norm": "False",
     "class_cond": "True",
 
-    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
+    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/val",
     "dataset": "brats2020",
-    "model_path": "output/configs4/diffusion/ema_0.9999_250000.pt"
+    "model_path": "output/configs4/diffusion/ema_0.9999_200000.pt"
 }
