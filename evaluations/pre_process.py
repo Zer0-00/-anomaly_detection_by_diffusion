@@ -168,7 +168,7 @@ def process_Brats2020(data_path, output_dir):
 def seperate_dataset(data_dir, output_dir):
     import random        
     def copyFile(fileDir, tarDirs):
-        pathDir = os.listdir(fileDir)
+        pathDir = os.listdir(fileDir[0])
         num = len(pathDir)
         print(fileDir,num)
 
@@ -176,8 +176,8 @@ def seperate_dataset(data_dir, output_dir):
         
         samples = {}
         cnt = 0
-        for tarDir, rate in tarDirs.items():
-            sample_num = int(rate * num)
+        for tarDir, info in tarDirs.items():
+            sample_num = int(info[0] * num)
             samples[tarDir] = pathDir[cnt:cnt+sample_num]
             cnt += sample_num
         #make sure all data points are covered
@@ -187,35 +187,47 @@ def seperate_dataset(data_dir, output_dir):
         for tarDir, sample in samples.items():
             for name in sample:
                 saveDir = os.path.join(tarDir, name)
-                data = np.load(os.path.join(fileDir, name))
+                data = np.load(os.path.join(fileDir[0], name))
                 np.save(saveDir, data)
+                saveDir = os.path.join(tarDirs[tarDir][1], _find_seg(name))
+                data = np.load(os.path.join(fileDir[1], _find_seg(name)))
+                np.save(saveDir, data)
+                                            
+    def _find_seg(image_file):
+        seg_suffix = "seg.npy"
+
+        image_split = image_file.split("_")
+        image_split[-1] = seg_suffix
+        seg_finded = "_".join(image_split)
+        
+        return seg_finded    
 
 
     folders = ['images','segmentations']
     class_names = ['healthy', 'unhealthy']
-    for folder in folders:
-        for class_name in class_names:
-            fileDir = os.path.join(data_dir,folder, class_name)
+    
+    for class_name in class_names:
+        fileDir = (os.path.join(data_dir,folders[0], class_name),os.path.join(data_dir,folders[1], class_name))
             
-            tarDirs = {
-            os.path.join(output_dir,'train',folder, class_name):0.8,
-            os.path.join(output_dir, 'val', folder, class_name):0.1,
-            os.path.join(output_dir, 'test', folder, class_name):0.1 
-            }
-            
-            for dir in [fileDir] + list(tarDirs.keys()):
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
-            copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
+        tarDirs = {
+        os.path.join(output_dir,'train',folders[0], class_name):(0.8,os.path.join(output_dir,'train',folders[1], class_name)),
+        os.path.join(output_dir, 'val', folders[0], class_name):(0.1,os.path.join(output_dir, 'val', folders[1], class_name)),
+        os.path.join(output_dir, 'test', folders[0], class_name):(0.1,os.path.join(output_dir, 'test', folders[1], class_name))
+        }
+        
+        for dir in [v[1] for v in tarDirs.values()] + list(tarDirs.keys()) :
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+        copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
 
 if __name__ == "__main__":
     # data_path = '..'
     # label_dir = os.path.join(data_path, "CheXpert-v1.0","train.csv")
     # output_dir = os.path.join(data_path, "CheXpert_Processed_1", "train")
     # process_chexpert(data_path, label_dir, output_dir)
-    data_path = '/Volumes/lxh_data/Brats2020/MICCAI_BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData'
-    output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
-    process_Brats2020(data_path, output_dir)
+    # data_path = '/Volumes/lxh_data/Brats2020/MICCAI_BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData'
+    # output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
+    # process_Brats2020(data_path, output_dir)
     data_path = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
     output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean_Split'
     seperate_dataset(data_path, output_dir)
