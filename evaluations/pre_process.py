@@ -192,19 +192,21 @@ def seperate_dataset(data_dir, output_dir):
 
 
     folders = ['images','segmentations']
+    class_names = ['healthy', 'unhealthy']
     for folder in folders:
-        fileDir = os.path.join(data_dir,folder)
-        
-        tarDirs = {
-           os.path.join(output_dir,'train',folder):0.8,
-           os.path.join(output_dir, 'val', folder):0.1,
-           os.path.join(output_dir, 'test', folder):0.1 
-        }
-        
-        for dir in [fileDir] + list(tarDirs.keys()):
-            if not os.path.exists(dir):
-                os.makedirs(dir)
-        copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
+        for class_name in class_names:
+            fileDir = os.path.join(data_dir,folder, class_name)
+            
+            tarDirs = {
+            os.path.join(output_dir,'train',folder, class_name):0.8,
+            os.path.join(output_dir, 'val', folder, class_name):0.1,
+            os.path.join(output_dir, 'test', folder, class_name):0.1 
+            }
+            
+            for dir in [fileDir] + list(tarDirs.keys()):
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+            copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
 
 if __name__ == "__main__":
     # data_path = '..'
@@ -214,8 +216,8 @@ if __name__ == "__main__":
     data_path = '/Volumes/lxh_data/Brats2020/MICCAI_BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData'
     output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
     process_Brats2020(data_path, output_dir)
-    # data_path = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
-    # output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean_Split'
+    data_path = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
+    output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean_Split'
     seperate_dataset(data_path, output_dir)
 
                 
