@@ -14,7 +14,7 @@
     "channel_mult": "1,1,2,2,4,4",
     "attention_resolutions": "16",
     "use_scale_shift_norm": "True",
-    "emb_combination": "concat",
+    "emb_combination": "None",
 
     "encoder_model_channels": 32,
     "encoder_num_res_blocks": 4,

@@ -69,10 +69,10 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, emb):
+    def forward(self, x, emb, extra_embed=None):
         for layer in self:
             if isinstance(layer, TimestepBlock):
-                x = layer(x, emb)
+                x = layer(x, emb, extra_embed)
             else:
                 x = layer(x)
         return x
@@ -443,7 +443,7 @@ class UNetModel(nn.Module):
     :param use_new_attention_order: use a different attention pattern for potentially
                                     increased efficiency.
     :param emb_combination: ways to combine extra embeddings to time embeddings.
-                            choose from (plus, concat)
+                            choose from (plus, concat, seperate)
     :param extra_emb_dim: number of dimensions for extra embeddings, 
                           defaults to that of time embeddings. Can not be set when emb_combination is 'plus'.
     """
@@ -500,7 +500,7 @@ class UNetModel(nn.Module):
         if self.emb_conbination == 'concat':
             self.embed_dim = self.time_embed_dim + self.extra_emb_dim
         else:
-            self.embed_dim = self.time_embed_dim
+            self.embed_dim = self.time_embed_dims
         
         self.time_embed = nn.Sequential(
             linear(model_channels, self.time_embed_dim),
@@ -696,17 +696,19 @@ class UNetModel(nn.Module):
         if extra_emb is not None:
             if self.emb_conbination == 'plus':
                 emb += extra_emb
+                extra_emb = None
             elif self.emb_conbination == 'concat':
                 emb = th.cat([emb, extra_emb], dim=1)
+                extra_emb = None
         
         h = x.type(self.dtype)
         for module in self.input_blocks:
-            h = module(h, emb)
+            h = module(h, emb, extra_emb)
             hs.append(h)
-        h = self.middle_block(h, emb)
+        h = self.middle_block(h, emb, extra_emb)
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, emb)
+            h = module(h, emb, extra_emb)
         h = h.type(x.dtype)
         return self.out(h)
 
