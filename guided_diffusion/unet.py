@@ -500,7 +500,7 @@ class UNetModel(nn.Module):
         if self.emb_conbination == 'concat':
             self.embed_dim = self.time_embed_dim + self.extra_emb_dim
         else:
-            self.embed_dim = self.time_embed_dims
+            self.embed_dim = self.time_embed_dim
         
         self.time_embed = nn.Sequential(
             linear(model_channels, self.time_embed_dim),

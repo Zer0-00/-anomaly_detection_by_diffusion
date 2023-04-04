@@ -218,7 +218,7 @@ class Brats2020(Dataset):
         seg_trans=None,
         class_labels=True,
         classes_included='both',
-    ) -> None:
+    ):
         """Dataset for Brats-2020 dataset.
 
         Args:
@@ -237,7 +237,7 @@ class Brats2020(Dataset):
         self.test = test
         self.class_labels = class_labels
         self.classes_included = classes_included
-        self.calss_names = ['healthy', 'unhealthy']
+        self.class_names = ['healthy', 'unhealthy']
         self.process_seg = self.test or self.class_labels
         
         self.image_folder = os.path.join(self.data_dir, "images")
@@ -245,22 +245,22 @@ class Brats2020(Dataset):
             self.segmentation_folder = os.path.join(self.data_dir, "segmentations")
         
         if self.classes_included is 'anomaly':
-            image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[1]))
-            self.image_dirs = [os.path.join(self.image_folder, self.calss_names[1], image_file) for image_file in image_files]
+            image_files = os.listdir(os.path.join(self.image_folder, self.class_names[1]))
+            self.image_dirs = [os.path.join(self.image_folder, self.class_names[1], image_file) for image_file in image_files]
             if self.process_seg:
-                self.segmentation_files = [[os.path.join(self.image_folder, self.calss_names[1],self._find_seg(image_file)) for image_file in image_files]]
+                self.segmentation_files = [[os.path.join(self.segmentation_folder, self.class_names[1],self._find_seg(image_file)) for image_file in image_files]]
         else:
-            image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[0]))
-            self.image_dirs = [os.path.join(self.image_folder, self.calss_names[0], image_file) for image_file in image_files]
+            image_files = os.listdir(os.path.join(self.image_folder, self.class_names[0]))
+            self.image_dirs = [os.path.join(self.image_folder, self.class_names[0], image_file) for image_file in image_files]
             if self.process_seg:
-                self.segmentation_dirs = [[os.path.join(self.image_folder, self.calss_names[0],self._find_seg(image_file)) for image_file in image_files]]
+                self.segmentation_dirs = [os.path.join(self.segmentation_folder, self.class_names[0],self._find_seg(image_file)) for image_file in image_files]
                 
             if self.classes_included == 'both':
-                image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[1]))
-                image_dirs = [os.path.join(self.image_folder, self.calss_names[1], image_file) for image_file in image_files]
+                image_files = os.listdir(os.path.join(self.image_folder, self.class_names[1]))
+                image_dirs = [os.path.join(self.image_folder, self.class_names[1], image_file) for image_file in image_files]
                 self.image_dirs += image_dirs
                 if self.process_seg:
-                    segmentation_dirs = [[os.path.join(self.image_folder, self.calss_names[1],self._find_seg(image_file)) for image_file in image_files]]
+                    segmentation_dirs = [os.path.join(self.segmentation_folder, self.class_names[1],self._find_seg(image_file)) for image_file in image_files]
                     self.segmentation_dirs += segmentation_dirs
         
         if trans is None:
@@ -272,6 +272,7 @@ class Brats2020(Dataset):
             self.seg_transforms = T.Compose([])
         else:
             self.seg_transforms = seg_trans
+            
             
     def __len__(self):
         return len(self.image_dirs)
