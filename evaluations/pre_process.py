@@ -93,7 +93,8 @@ def process_chexpert(data_path, label_dir, output_path, image_size = [256,256], 
 def process_Brats2020(data_path, output_dir):
     
     for folder in ["images", "segmentations"]:
-        create_folders(os.path.join(output_dir, folder))
+        for class_name in ['healthy', 'unhealthy']:
+            create_folders(os.path.join(output_dir, folder, class_name))
     
     
     img_types = ("flair", "t1", "t1ce", "t2", "seg")
@@ -132,6 +133,16 @@ def process_Brats2020(data_path, output_dir):
         
         #slice, process and save
         for slice in range(80, 130):        #only center slice (z in 80:-26)
+            #processing segmentations
+            seg = imgs[4][:,:,slice]
+            seg = trans(seg)
+            is_anomaly = seg.sum() > 0
+            if  is_anomaly:
+                seg_save_path = os.path.join(output_dir, "segmentations",'unhealthy', "BraTS20_Training_{:0>5d}_seg".format(global_counts))
+            else:
+                seg_save_path = os.path.join(output_dir, "segmentations",'healthy', "BraTS20_Training_{:0>5d}_seg".format(global_counts))
+            save_method(seg_save_path, seg)
+            
             #processing images
             result = []
             for j in range(4):
@@ -146,14 +157,11 @@ def process_Brats2020(data_path, output_dir):
                 result.append(img)
             
             result = torch.cat(result, dim=0)
-            result_save_path = os.path.join(output_dir, "images", "BraTS20_Training_{:0>5d}_image".format(global_counts))
+            if is_anomaly:
+                result_save_path = os.path.join(output_dir, "images", 'unhealthy',"BraTS20_Training_{:0>5d}_image".format(global_counts))
+            else:
+                result_save_path = os.path.join(output_dir, "images", 'healthy',"BraTS20_Training_{:0>5d}_image".format(global_counts))
             save_method(result_save_path, result)
-            
-            #processing segmentations
-            seg = imgs[4][:,:,slice]
-            seg = trans(seg)
-            seg_save_path = os.path.join(output_dir, "segmentations", "BraTS20_Training_{:0>5d}_seg".format(global_counts))
-            save_method(seg_save_path, seg)
             
             global_counts += 1    
         
@@ -184,28 +192,30 @@ def seperate_dataset(data_dir, output_dir):
 
 
     folders = ['images','segmentations']
+    class_names = ['healthy', 'unhealthy']
     for folder in folders:
-        fileDir = os.path.join(data_dir,folder)
-        
-        tarDirs = {
-           os.path.join(output_dir,'train',folder):0.8,
-           os.path.join(output_dir, 'val', folder):0.1,
-           os.path.join(output_dir, 'test', folder):0.1 
-        }
-        
-        for dir in [fileDir] + list(tarDirs.keys()):
-            if not os.path.exists(dir):
-                os.makedirs(dir)
-        copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
+        for class_name in class_names:
+            fileDir = os.path.join(data_dir,folder, class_name)
+            
+            tarDirs = {
+            os.path.join(output_dir,'train',folder, class_name):0.8,
+            os.path.join(output_dir, 'val', folder, class_name):0.1,
+            os.path.join(output_dir, 'test', folder, class_name):0.1 
+            }
+            
+            for dir in [fileDir] + list(tarDirs.keys()):
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+            copyFile(fileDir, tarDirs) #rate means the percentage of images move to target1       
 
 if __name__ == "__main__":
     # data_path = '..'
     # label_dir = os.path.join(data_path, "CheXpert-v1.0","train.csv")
     # output_dir = os.path.join(data_path, "CheXpert_Processed_1", "train")
     # process_chexpert(data_path, label_dir, output_dir)
-    # data_path = '/Volumes/lxh_data/Brats2020/MICCAI_BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData'
-    # output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
-    # process_Brats2020(data_path, output_dir)
+    data_path = '/Volumes/lxh_data/Brats2020/MICCAI_BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData'
+    output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
+    process_Brats2020(data_path, output_dir)
     data_path = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean'
     output_dir = '/Volumes/lxh_data/Brats2020/Brats_Processed_Clean_Split'
     seperate_dataset(data_path, output_dir)

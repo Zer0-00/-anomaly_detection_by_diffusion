@@ -213,47 +213,83 @@ class Brats2020(Dataset):
     def __init__(
         self,
         data_dir,
-        test = False,
-        trans = None,
-        seg_trans = None,
-        class_labels = True,
+        test=False,
+        trans=None,
+        seg_trans=None,
+        class_labels=True,
+        classes_included='both',
     ) -> None:
+        """Dataset for Brats-2020 dataset.
+
+        Args:
+            data_dir: data directory
+            test (bool, optional): whether generating the test dataset(i.e. including segmentations). Defaults to False.
+            trans (optional): Preprocess functions for images. Defaults to None.
+            seg_trans (optional): Preprocess functions for segmentations. Defaults to None.
+            class_labels (bool, optional): Whether to generate the class labels. Defaults to True.
+            classes_included (str, optional): the classes included in dataset. Choose from ['normal','anomaly','both'].Defaults to 'both'.
+        """
         super().__init__()
+        
+        assert classes_included in ['normal','anomaly', 'both'], "Class labels should be set to 'normal', 'anomaly' or 'both'."
         
         self.data_dir = data_dir
         self.test = test
         self.class_labels = class_labels
+        self.classes_included = classes_included
+        self.calss_names = ['healthy', 'unhealthy']
+        self.process_seg = self.test or self.class_labels
         
         self.image_folder = os.path.join(self.data_dir, "images")
-        self.image_files = os.listdir(self.image_folder)
+        if self.process_seg:
+            self.segmentation_folder = os.path.join(self.data_dir, "segmentations")
+        
+        if self.classes_included is 'anomaly':
+            image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[1]))
+            self.image_dirs = [os.path.join(self.image_folder, self.calss_names[1], image_file) for image_file in image_files]
+            if self.process_seg:
+                self.segmentation_files = [[os.path.join(self.image_folder, self.calss_names[1],self._find_seg(image_file)) for image_file in image_files]]
+        else:
+            image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[0]))
+            self.image_dirs = [os.path.join(self.image_folder, self.calss_names[0], image_file) for image_file in image_files]
+            if self.process_seg:
+                self.segmentation_dirs = [[os.path.join(self.image_folder, self.calss_names[0],self._find_seg(image_file)) for image_file in image_files]]
+                
+            if self.classes_included == 'both':
+                image_files = os.listdir(os.path.join(self.image_folder, self.calss_names[1]))
+                image_dirs = [os.path.join(self.image_folder, self.calss_names[1], image_file) for image_file in image_files]
+                self.image_dirs += image_dirs
+                if self.process_seg:
+                    segmentation_dirs = [[os.path.join(self.image_folder, self.calss_names[1],self._find_seg(image_file)) for image_file in image_files]]
+                    self.segmentation_dirs += segmentation_dirs
         
         if trans is None:
             self.transforms = T.Compose([])
         else:
             self.transforms = trans
-        
-        self.segmentation_folder = os.path.join(self.data_dir, "segmentations")
+            
         if seg_trans is None:
             self.seg_transforms = T.Compose([])
         else:
             self.seg_transforms = seg_trans
             
     def __len__(self):
-        return len(self.image_files)
+        return len(self.image_dirs)
     
     def __getitem__(self, idx) -> dict:
         outputs = dict()
         
-        image_dir = os.path.join(self.image_folder, self.image_files[idx])
+        image_dir = self.image_dirs[idx]
         image = torch.Tensor(self._load_method(image_dir))
         image = self.transforms(image)
         #outputs["input"] = image
         
         #matching segmentation to image
 
-        seg_dir = os.path.join(self.segmentation_folder, self._find_seg(self.image_files[idx]))
-        seg = torch.Tensor(self._load_method(seg_dir))
-        seg = self.seg_transforms(seg)
+        if self.process_seg:
+            seg_dir = self.segmentation_dirs[idx]
+            seg = torch.Tensor(self._load_method(seg_dir))
+            seg = self.seg_transforms(seg)
         
         #determine whether is normal (0:normal, 1: abnormal)
         if self.class_labels:
