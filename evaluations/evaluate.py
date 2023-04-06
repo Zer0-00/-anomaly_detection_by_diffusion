@@ -4,8 +4,9 @@ import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
 import os
+import cv2
 
-from metrics import nonzero_masking
+from metrics import nonzero_masking, remove_noise
 
 def evaluate_training(progress_dir, save_dir):
     """
@@ -52,35 +53,54 @@ def evaluate_training(progress_dir, save_dir):
     
 def evaluate_image(image_path, save_dir):
     data = np.load(image_path)
-                
-    img = data[None,0,:,:,:4]
-    seg = np.expand_dims(data[0,:,:,4], axis=(0,1))
-    generated = data[None,0,:,:,5:]*1.0
-    pred = np.expand_dims(np.sum((generated-img)**2, axis=3), axis=(3))
-    pred = nonzero_masking(img, pred)
-    pred = (pred - pred.min())/(pred.max()-pred.min())
+    
+    def mask_fn(pred, mask, return_thresh=False):
+        masked_pred = pred[np.where(mask > 0)].reshape(1, -1)
+        masked_pred = (masked_pred * 255.0).astype(np.uint8).squeeze()
+        thresh ,_ = cv2.threshold(masked_pred, 0, 255, cv2.THRESH_OTSU)
+        thresh = thresh/255.0
+        pred = (pred > thresh) * 1.0
+        if return_thresh:
+            return thresh, pred
+        else:
+            return pred
+    img = data[np.newaxis,0,:,:,:4]*1.0/255.0
+    seg = np.expand_dims(data[0,:,:,4], axis=(0,-1))
+    generated = data[np.newaxis,0,:,:,5:]*1.0/255.0
+    pred = np.expand_dims(np.mean(np.sqrt((generated-img)**2), axis=3), axis = -1)
+    pred = remove_noise(pred)
+    #change from (0,255) to (0,1)
+    pred, mask = nonzero_masking(img, pred, return_mask=True)
+    thresh, pred_seg = mask_fn(pred, mask, return_thresh=True)
+    
+    pred_modality = remove_noise(np.sqrt((generated-img)**2))
     
     for i in range(4):
-        plt.subplot(3,4,i + 1)
-        plt.imshow(img[0,:,:,i].squeeze().astype(np.uint8),cmap='gray')
+        plt.subplot(4,4,i + 1)
+        plt.imshow(img[0,:,:,i].squeeze(),cmap='gray', vmin=0.0, vmax=1.0)
         plt.axis('off')
         plt.title(f'image(channel{i})')
     for i in range(4):
-        plt.subplot(3,4,i + 5)
-        plt.imshow(generated[0,:,:,i].squeeze().astype(np.uint8), cmap='gray')
+        plt.subplot(4,4,i + 5)
+        plt.imshow(generated[0,:,:,i].squeeze(), cmap='gray', vmin=0.0, vmax=1.0)
         plt.axis('off')
         plt.title(f'generated(channel{i})')
-    plt.subplot(3,4,10)
-    plt.imshow((seg > 0 * 1.0).squeeze().astype(np.uint8),cmap='gray')
+    for i in range(4):
+        plt.subplot(4,4,i + 9)
+        plt.imshow(pred_modality[0,:,:,i].squeeze(), cmap='gray')
+        plt.axis('off')
+        plt.title(f'pred(channel{i})')
+    plt.subplot(4,4,14)
+    plt.imshow((seg > 0 * 1.0).squeeze(),cmap='gray', vmin=0.0, vmax=1.0)
     plt.axis('off')
     plt.title('ground truth')
-    plt.subplot(3,4,11)
-    plt.imshow(pred.squeeze().astype(np.uint8), cmap='gray')
+    plt.subplot(4,4,15)
+    plt.imshow(pred_seg.squeeze(), cmap='gray', vmin=0.0, vmax=1.0)
     plt.axis('off')
     plt.title('segmentation')
-    plt.subplot(3,4,12)
-    plt.imshow(pred.squeeze().astype(np.uint8), cmap='Spectral_r', alpha=0.5)
-    plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
+    plt.subplot(4,4,16)
+    plt.imshow((pred * pred_seg).squeeze(), cmap='Spectral_r')
+    #plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
     plt.axis('off')
     plt.title('image+segmentation')
     plt.savefig(save_dir)
@@ -134,6 +154,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    evaluate_image("output/configs4/anomaly_detection/samples_24.npy", "output/configs4/anomaly_detection/samples_24.png")
+    evaluate_image("output/configs4/anomaly_detection/val/samples_24.npy", "output/configs4/anomaly_detection/val/samples_24.png")
     
     #evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
