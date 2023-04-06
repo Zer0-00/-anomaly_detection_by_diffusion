@@ -244,7 +244,7 @@ class Brats2020(Dataset):
         if self.process_seg:
             self.segmentation_folder = os.path.join(self.data_dir, "segmentations")
         
-        if self.classes_included is 'anomaly':
+        if self.classes_included == 'anomaly':
             image_files = os.listdir(os.path.join(self.image_folder, self.class_names[1]))
             self.image_dirs = [os.path.join(self.image_folder, self.class_names[1], image_file) for image_file in image_files]
             if self.process_seg:
