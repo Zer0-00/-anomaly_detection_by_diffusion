@@ -11,16 +11,17 @@
     "channel_mult": "1,1,2,2,4,4",
     "attention_resolutions": "16",
     "use_scale_shift_norm": "True",
-    "emb_combination": "concat",
+    "emb_combination": "None",
     "encoder_model_channels": 128,
     "encoder_num_res_blocks": 2,
     "encoder_channel_mult": "1,1,2,2,4,4,4",
     "encoder_attention_resolutions": "16",
     "encoder_resblock_updown": "True",
     "encoder_use_scale_shift_norm": "True",
+    "learn_sigma": "True",
 
-    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Split/train",
+    "data_dir": "/home/xuehong/Datasets/Brats_Processed_Clean_Split/train",
     "dataset": "brats2020",
-    "model_path": "output/configs3/diffusion/ema_0.9999_150000.pt"
+    "model_path": "output/configs3/diffusion/ema_0.9999_250000.pt"
     
 }
