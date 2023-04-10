@@ -244,7 +244,7 @@ class ResBlock(TimestepBlock):
             self._forward, (x, emb, extra_emb), self.parameters(), self.use_checkpoint
         )
 
-    def _forward(self, x, emb, extra_emb=None):
+    def _forward(self, x, emb=None, extra_emb=None):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -253,23 +253,29 @@ class ResBlock(TimestepBlock):
             h = in_conv(h)
         else:
             h = self.in_layers(x)
-        emb_out = self.emb_layers(emb).type(h.dtype)
-        while len(emb_out.shape) < len(h.shape):
-            emb_out = emb_out[..., None]
+        if emb is not None:
+            emb_out = self.emb_layers(emb).type(h.dtype)
+            while len(emb_out.shape) < len(h.shape):
+                emb_out = emb_out[..., None]
+                
         if self.extra_emb_channels is not None: 
             extra_emb_out = self.extra_emb_layers(extra_emb).type(h.dtype)    
             while len(extra_emb_out.shape) < len(h.shape):
                 extra_emb_out = extra_emb_out[..., None]
+                
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
-            scale, shift = th.chunk(emb_out, 2, dim=1)
-            h = out_norm(h) * (1 + scale) + shift
+            h = out_norm(h)
+            if emb is not None:
+                scale, shift = th.chunk(emb_out, 2, dim=1)
+                h = h * (1 + scale) + shift
             if self.extra_emb_channels is not None:
                 extra_scale, extra_shift = th.chunk(extra_emb_out, 2, dim=1)
                 h = h * (1 + extra_scale) + extra_shift
             h = out_rest(h)
         else:
-            h = h + emb_out
+            if emb is not None:
+                h = h + emb_out
             if self.extra_emb_channels is not None:
                 h = extra_emb_out
             h = self.out_layers(h)
@@ -923,7 +929,7 @@ class EncoderUNetModel(nn.Module):
         self.input_blocks.apply(convert_module_to_f32)
         self.middle_block.apply(convert_module_to_f32)
 
-    def forward(self, x, timesteps, y=None):
+    def forward(self, x, timesteps=None, y=None):
         """
         Apply the model to an input batch.
 
@@ -935,11 +941,14 @@ class EncoderUNetModel(nn.Module):
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
         
-        emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
+        if timesteps is not None:
+            emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
+        else:
+            emb = None
 
         if self.num_classes is not None:
             assert y.shape == (x.shape[0],)
-            emb = emb + self.label_emb(y)
+            emb = emb + self.label_emb(y) if emb is not None else self.label_emb(y)
             
         results = []
         h = x.type(self.dtype)

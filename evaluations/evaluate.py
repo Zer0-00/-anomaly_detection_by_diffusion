@@ -156,4 +156,4 @@ if __name__ == '__main__':
     
     ##evaluate_image("output/configs4/anomaly_detection/val/samples_24.npy", "output/configs4/anomaly_detection/val/samples_24.png")
     
-    evaluate_z("output/configs4/zGenerate/zs_and_labels.npz", "output/configs4/zGenerate/")
+    evaluate_z("output/configs3/zGenerate/zs_and_labels.npz", "output/configs3/zGenerate/")

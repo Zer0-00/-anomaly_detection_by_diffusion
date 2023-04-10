@@ -15,13 +15,12 @@
     "attention_resolutions": "16",
     "use_scale_shift_norm": "True",
     "emb_combination": "None",
-    "encoder_model_channels": 128,
-    "encoder_num_res_blocks": 2,
-    "encoder_channel_mult": "1,1,2,2,4,4,4",
+    "encoder_model_channels": 32,
+    "encoder_num_res_blocks": 4,
+    "encoder_channel_mult": "1,1,2,2,4,4",
     "encoder_attention_resolutions": "16",
     "encoder_resblock_updown": "True",
-    "encoder_use_scale_shift_norm": "True",
-    "learn_sigma": "True",
+    "encoder_use_scale_shift_norm": "False",
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Clean_Split/train",
     "dataset": "brats2020"
