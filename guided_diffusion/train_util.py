@@ -333,6 +333,7 @@ class DecoupledDiffusionTrainLoop(TrainLoop):
             log_loss_dict(
                 self.diffusion, t, {k: v * weights for k, v in losses.items()}
             )
+                    
             self.mp_trainer.backward(loss)
         
 

@@ -213,7 +213,8 @@ class DecoupledDiffusionModel(torch.nn.Module):
             use_scale_shift_norm=encoder_use_scale_shift_norm,
             resblock_updown=encoder_resblock_updown,
             pool=pool,
-            num_classes=2 if self.class_cond else None
+            num_classes=2 if self.class_cond else None,
+            input_time=False,
         )
         
         self.denoised = UNetModel(
@@ -244,7 +245,7 @@ class DecoupledDiffusionModel(torch.nn.Module):
         return denoised_img
     
     def get_embbed(self, x, y=None):
-        return self.encoder(x, torch.zeros((x.shape[0],), device=x.device), y=y)
+        return self.encoder(x, None, y=y)
     
     def predict_with_Z(self, x, timesteps, z):
         denoised_img = self.denoised(x, timesteps, extra_emb=z)

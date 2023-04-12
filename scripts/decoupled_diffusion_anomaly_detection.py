@@ -37,6 +37,9 @@ def main():
     model.load_state_dict(
         dist_util.load_state_dict(args.model_path, map_location="cpu")
     )
+    for name, param in model.named_parameters():
+        print(name, param)
+    
     model.to(dist_util.dev())
     if args.use_fp16:
         model.convert_to_fp16()

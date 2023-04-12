@@ -169,7 +169,7 @@ class ResBlock(TimestepBlock):
         use_checkpoint=False,
         up=False,
         down=False,
-        extra_emb_channels=None,
+        extra_emb_channels=0,
     ):
         super().__init__()
         self.channels = channels
@@ -198,14 +198,15 @@ class ResBlock(TimestepBlock):
         else:
             self.h_upd = self.x_upd = nn.Identity()
 
-        self.emb_layers = nn.Sequential(
-            nn.SiLU(),
-            linear(
-                emb_channels,
-                2 * self.out_channels if use_scale_shift_norm else self.out_channels,
-            ),
-        )
-        if self.extra_emb_channels is not None:
+        if emb_channels > 0:
+            self.emb_layers = nn.Sequential(
+                nn.SiLU(),
+                linear(
+                    emb_channels,
+                    2 * self.out_channels if use_scale_shift_norm else self.out_channels,
+                ),
+            )
+        if self.extra_emb_channels > 0:
             self.extra_emb_layers = nn.Sequential(
                 nn.SiLU(),
                 linear(
@@ -258,7 +259,7 @@ class ResBlock(TimestepBlock):
             while len(emb_out.shape) < len(h.shape):
                 emb_out = emb_out[..., None]
                 
-        if self.extra_emb_channels is not None: 
+        if self.extra_emb_channels > 0: 
             extra_emb_out = self.extra_emb_layers(extra_emb).type(h.dtype)    
             while len(extra_emb_out.shape) < len(h.shape):
                 extra_emb_out = extra_emb_out[..., None]
@@ -269,15 +270,15 @@ class ResBlock(TimestepBlock):
             if emb is not None:
                 scale, shift = th.chunk(emb_out, 2, dim=1)
                 h = h * (1 + scale) + shift
-            if self.extra_emb_channels is not None:
+            if self.extra_emb_channels > 0:
                 extra_scale, extra_shift = th.chunk(extra_emb_out, 2, dim=1)
                 h = h * (1 + extra_scale) + extra_shift
             h = out_rest(h)
         else:
             if emb is not None:
                 h = h + emb_out
-            if self.extra_emb_channels is not None:
-                h = extra_emb_out
+            if self.extra_emb_channels > 0:
+                h = h + extra_emb_out
             h = self.out_layers(h)
         return self.skip_connection(x) + h
 
@@ -765,6 +766,7 @@ class EncoderUNetModel(nn.Module):
         use_new_attention_order=False,
         pool="adaptive",
         num_classes=None,
+        input_time=True,
     ):
         super().__init__()
 
@@ -785,16 +787,21 @@ class EncoderUNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
         self.num_classes = num_classes
-
-        time_embed_dim = model_channels * 4
-        self.time_embed = nn.Sequential(
-            linear(model_channels, time_embed_dim),
-            nn.SiLU(),
-            linear(time_embed_dim, time_embed_dim),
-        )
+        self.input_time = input_time
+        
+        embed_dim = model_channels * 4
+        if self.input_time:
+            self.time_embed = nn.Sequential(
+                linear(model_channels, embed_dim),
+                nn.SiLU(),
+                linear(embed_dim, embed_dim),
+            )
 
         if self.num_classes is not None:
-            self.label_emb = nn.Embedding(num_classes, time_embed_dim)
+            self.label_emb = nn.Embedding(num_classes, embed_dim)
+        
+        if (not self.input_time) and (self.num_classes is None):
+            embed_dim = 0
         
         ch = int(channel_mult[0] * model_channels)
         self.input_blocks = nn.ModuleList(
@@ -808,7 +815,7 @@ class EncoderUNetModel(nn.Module):
                 layers = [
                     ResBlock(
                         ch,
-                        time_embed_dim,
+                        embed_dim,
                         dropout,
                         out_channels=int(mult * model_channels),
                         dims=dims,
@@ -836,7 +843,7 @@ class EncoderUNetModel(nn.Module):
                     TimestepEmbedSequential(
                         ResBlock(
                             ch,
-                            time_embed_dim,
+                            embed_dim,
                             dropout,
                             out_channels=out_ch,
                             dims=dims,
@@ -858,7 +865,7 @@ class EncoderUNetModel(nn.Module):
         self.middle_block = TimestepEmbedSequential(
             ResBlock(
                 ch,
-                time_embed_dim,
+                embed_dim,
                 dropout,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
@@ -873,7 +880,7 @@ class EncoderUNetModel(nn.Module):
             ),
             ResBlock(
                 ch,
-                time_embed_dim,
+                embed_dim,
                 dropout,
                 dims=dims,
                 use_checkpoint=use_checkpoint,
@@ -941,7 +948,7 @@ class EncoderUNetModel(nn.Module):
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
         
-        if timesteps is not None:
+        if self.input_time:
             emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
         else:
             emb = None
