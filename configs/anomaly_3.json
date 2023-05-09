@@ -5,6 +5,7 @@
 
     "timestep_respacing":"ddim25",
     "use_ddim": "True",
+    "shifting_z": "True",
     
     "image_size": 256,
     "in_channels": 4,
@@ -21,6 +22,8 @@
 
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Clean_Split/val",
     "dataset": "brats2020",
-    "z_path": "model/configs3/template.npz",
-    "model_path": "model/configs3/ema_model.pt"
+    "median_path": "output/configs3/Linear/median_logist.npz",
+    "model_path": "output/configs3/diffusion/ema_0.9999_500000.pt",
+    "linear_path": "output/configs3/Linear/model011999.pt",
+    "z_state_path": "output/configs3/zGenerate/z_state.npz"
 }

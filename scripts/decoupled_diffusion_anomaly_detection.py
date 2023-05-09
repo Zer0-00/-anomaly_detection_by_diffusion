@@ -37,8 +37,6 @@ def main():
     model.load_state_dict(
         dist_util.load_state_dict(args.model_path, map_location="cpu")
     )
-    for name, param in model.named_parameters():
-        print(name, param)
     
     model.to(dist_util.dev())
     if args.use_fp16:
@@ -49,9 +47,9 @@ def main():
         state_dict = dist_util.load_state_dict(args.linear_path, map_location="cpu")
         w = state_dict["weight"].to(dist_util.dev())
         b = state_dict["bias"].to(dist_util.dev())
-        median = th.Tensor(np.load(args.median_path)['lgs_healthy'], device=dist_util.dev())
+        median = th.Tensor(np.load(args.median_path)['lgs_healthy']).to(dist_util.dev())
         z_state = np.load(args.z_state_path)
-        z_mean, z_std = th.Tensor(z_state['z_mean'], device=dist_util.dev()), th.Tensor(z_state['z_std'], device=dist_util.dev())
+        z_mean, z_std = th.Tensor(z_state['z_mean']).to(dist_util.dev()), th.Tensor(z_state['z_std']).to(dist_util.dev())
         
     data = load_data(
             data_dir=args.data_dir,
@@ -68,9 +66,10 @@ def main():
     if args.shifting_z:
         def shiftingZ(z:th.Tensor):
             z = (z - z_mean)/z_std
-            s = (median - b - w.transpose_().mul(z))/(w.mul(w.transpose_()))
-            z = z + s.mul(w)
+            s = (median - b - th.mm(z, w.transpose(0,1)))/(th.mm(w,(w.transpose(0,1))))
+            z = z + s*w
             z = z * z_std + z_mean
+            return z
     else:
         def shiftingZ(z:th.Tensor):
             return z
