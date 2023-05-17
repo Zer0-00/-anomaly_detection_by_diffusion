@@ -91,14 +91,12 @@ def main():
         find_unused_parameters=False,
     )
     
-    lgs_healthy = []
-    
     logger.log("classifier training")
     def forward_backward_log(data_loader, prefix="train"):
         batch, extra = next(data_loader)
         labels = extra["y"].to(dist_util.dev())
-
         batch = batch.to(dist_util.dev())
+        
         for i, (sub_batch, sub_labels) in enumerate(
             split_microbatches(args.microbatch, batch, labels)
         ):  
@@ -122,11 +120,6 @@ def main():
                 if i == 0:
                     mp_trainer.zero_grad()
                 mp_trainer.backward(loss * len(sub_batch) / len(batch))
-            
-            lg_healthy = preds[th.where(sub_labels == 0)]
-            gathered_lg = [th.zeros_like(lg_healthy) for _ in range(dist.get_world_size())]
-            dist.all_gather(gathered_lg, lg_healthy)  # gather not supported with NCCL
-            lgs_healthy.extend([lg_healthy.cpu().numpy() for lg_healthy in gathered_lg])
     
     for step in range(args.iterations):
         logger.logkv("step", step)
@@ -152,6 +145,16 @@ def main():
             logger.log("saving model...")
             save_model(mp_trainer, opt, step)
 
+    #calculate median prediction
+    data = load_data(
+        data_dir=args.data_dir,
+        batch_size=args.batch_size,
+        class_labels=True,
+        dataset=args.dataset,
+        deterministic=False,
+        limited_num=-1
+    )
+    lgs_healthy = find_lgs(model, classifier, data, z_mean, z_std, 0)
     lgs_healthy = np.concatenate(lgs_healthy, axis=0).mean(axis=0)
     
     if dist.get_rank() == 0:
@@ -196,6 +199,26 @@ def split_microbatches(microbatch, *args):
     else:
         for i in range(0, bs, microbatch):
             yield tuple(x[i : i + microbatch] if x is not None else None for x in args)
+            
+def find_lgs(model, classifier, data, z_mean, z_std, class_label=0):
+    lgs_healthy = []
+    with th.no_grad():
+        for batch, extra in data:
+            labels = extra["y"].to(dist_util.dev())
+            batch = batch.to(dist_util.dev())
+            
+            model_kwargs = {}
+            model_kwargs['y'] = labels
+            z = model.get_embbed(batch, **model_kwargs)
+            z = (z - z_mean)/z_std
+            preds = classifier(z)
+            
+            lg_healthy = preds[th.where(labels == class_label)]
+            gathered_lg = [th.zeros_like(lg_healthy) for _ in range(dist.get_world_size())]
+            dist.all_gather(gathered_lg, lg_healthy)  # gather not supported with NCCL
+            lgs_healthy.extend([lg_healthy.cpu().numpy() for lg_healthy in gathered_lg])
+    
+    return lgs_healthy
 
 def create_argparser():
     defaults = dict(

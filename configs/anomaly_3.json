@@ -1,12 +1,13 @@
 {
     "batch_size": 12,
 
-    "output_dir": "./output/configs3/anomaly_detection",
+    "output_dir": "./output/configs3/anomaly_detection/val",
 
     "timestep_respacing":"ddim25",
     "use_ddim": "True",
     "shifting_z": "True",
-    
+    "max_t": 1000,
+
     "image_size": 256,
     "in_channels": 4,
     "channel_mult": "1,1,2,2,4,4",
@@ -23,7 +24,7 @@
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Clean_Split/val",
     "dataset": "brats2020",
     "median_path": "output/configs3/Linear/median_logist.npz",
-    "model_path": "output/configs3/diffusion/ema_0.9999_500000.pt",
-    "linear_path": "output/configs3/Linear/model011999.pt",
+    "model_path": "output/configs3/diffusion/ema_0.9999_450000.pt",
+    "linear_path": "output/configs3/Linear/model006000.pt",
     "z_state_path": "output/configs3/zGenerate/z_state.npz"
 }

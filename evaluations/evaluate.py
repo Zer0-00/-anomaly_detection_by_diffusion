@@ -99,7 +99,7 @@ def evaluate_image(image_path, save_dir):
     plt.axis('off')
     plt.title('segmentation')
     plt.subplot(4,4,16)
-    plt.imshow((pred * pred_seg).squeeze(), cmap='Spectral_r')
+    plt.imshow((pred * pred_seg).squeeze(), cmap='Spectral_r', vmin=0.0, vmax=1.0)
     #plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
     plt.axis('off')
     plt.title('image+segmentation')
@@ -154,6 +154,6 @@ if __name__ == '__main__':
     # output_dir = "output/configs3/diffusion/progress.png"
     # evaluate_training(progress_dir,output_dir)
     
-    ##evaluate_image("output/configs4/anomaly_detection/val/samples_24.npy", "output/configs4/anomaly_detection/val/samples_24.png")
+    evaluate_image("output/configs3/anomaly_detection/val/samples_24.npy", "output/configs3/anomaly_detection/val/samples_24.png")
     
-    evaluate_z("output/configs3/zGenerate/zs_and_labels.npz", "output/configs3/zGenerate/")
+    #evaluate_z("output/configs3/zGenerate/zs_and_labels.npz", "output/configs3/zGenerate/")

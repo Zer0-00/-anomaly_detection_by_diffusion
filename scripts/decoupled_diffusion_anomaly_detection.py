@@ -56,7 +56,8 @@ def main():
             batch_size=args.batch_size,
             dataset=args.dataset,
             deterministic=False,
-            limited_num=int(3200/args.batch_size) if args.calcu_thresh else -1,
+            limited_num=4,
+            #limited_num=int(3200/args.batch_size) if args.calcu_thresh else -1,
             test=True,
         )
     
@@ -68,8 +69,10 @@ def main():
             z = (z - z_mean)/z_std
             s = (median - b - th.mm(z, w.transpose(0,1)))/(th.mm(w,(w.transpose(0,1))))
             z = z + s*w
+            
             z = z * z_std + z_mean
-            return z
+
+            return z * 0
     else:
         def shiftingZ(z:th.Tensor):
             return z
@@ -145,7 +148,7 @@ def create_argparser():
         model_path="",
         classifier_path="",
         classifier_scale=1.0,
-        max_t=500,
+        max_t=-1,
         output_dir="./output/anomaly_detection",
         dataset="Brats2020",
         data_dir = "/home/xuehong/Datasets/Brats_Processed_Split/val",

@@ -291,4 +291,4 @@ def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):
     
 if __name__ == "__main__":
     #using_thresh('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection', thresh=0.03933)
-    finding_threshold('output/configs4/anomaly_detection/val','output/configs4/anomaly_detection/val')
+    finding_threshold('output/configs3/anomaly_detection/val','output/configs3/anomaly_detection/val')

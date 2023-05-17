@@ -1,7 +1,7 @@
 {
     "batch_size": 64,
     "microbatch": -1,
-    "iterations":12000,
+    "iterations":6000,
     "lr":1e-3,
     "log_interval":300,
     "eval_interval":5,
