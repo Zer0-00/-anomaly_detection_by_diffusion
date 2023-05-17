@@ -71,7 +71,7 @@ def main():
             
             z = z * z_std + z_mean
 
-            return z * 0
+            return z
     else:
         def shiftingZ(z:th.Tensor):
             return z
