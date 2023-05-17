@@ -208,7 +208,8 @@ def find_lgs(model, classifier, data, z_mean, z_std, class_label=0):
             batch = batch.to(dist_util.dev())
             
             model_kwargs = {}
-            model_kwargs['y'] = labels
+            if model.class_cond:
+                model_kwargs['y'] = labels
             z = model.get_embbed(batch, **model_kwargs)
             z = (z - z_mean)/z_std
             preds = classifier(z)

@@ -24,7 +24,7 @@
     "data_dir": "/home/xuehong/Datasets/Brats_Processed_Clean_Split/val",
     "dataset": "brats2020",
     "median_path": "output/configs3/Linear/median_logist.npz",
-    "model_path": "output/configs3/diffusion/ema_0.9999_450000.pt",
+    "model_path": "output/configs3/diffusion/ema_0.9999_500000.pt",
     "linear_path": "output/configs3/Linear/model006000.pt",
     "z_state_path": "output/configs3/zGenerate/z_state.npz"
 }
