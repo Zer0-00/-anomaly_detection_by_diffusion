@@ -189,7 +189,8 @@ class BratsEvaluator():
         metrics_imgs['threshold'] = []
         
         iterf = tqdm(self.data_files) if  use_tqdm else self.data_files
-              
+        
+        max_min_dict = {"max_DICE":0, "max_DICE_file":None,"max_DICE_thresh":0,"min_DICE":1, "min_DICE_file":None, "min_DICE_thresh":0}
         for file_name in iterf:
             file_dir = os.path.join(self.data_folder, file_name)
             data = np.load(file_dir)
@@ -217,9 +218,18 @@ class BratsEvaluator():
             
             for key in metrics_imgs:
                 metrics_imgs[key].append(metrics_img[key])
+                
+            if metrics_img["DICE_WT"] > max_min_dict["max_DICE"]:
+                max_min_dict["max_DICE"] = metrics_img["DICE_WT"]
+                max_min_dict["max_DICE_file"] = metrics_img["file_name"]
+                max_min_dict["max_DICE_thresh"] = metrics_img['threshold']
+            if metrics_img["DICE_WT"] < max_min_dict["min_DICE"]:
+                max_min_dict["min_DICE"] = metrics_img["DICE_WT"]
+                max_min_dict["min_DICE_file"] = metrics_img["file_name"]
+                max_min_dict["min_DICE_thresh"] = metrics_img['threshold']
                         
         metrics = {k:(np.mean(v), np.std(v)) for k,v in metrics_imgs.items()}
-        return metrics
+        return metrics, max_min_dict
                 
 def finding_threshold(data_folder, output_dir):
     """finging threshold based on DICE by otsu
@@ -251,14 +261,17 @@ def finding_threshold(data_folder, output_dir):
         metrics=metrics,
         mask_fn=mask_fn
     )
-    metrics_thresh = evaluator.finding_threshold(use_tqdm=True)
+    metrics_thresh, max_min_dict = evaluator.finding_threshold(use_tqdm=True)
     metrics_output = {}
     for k,v in metrics_thresh.items():
         metrics_output[k+'(Mean)'] = v[0]
         metrics_output[k+'(Std)'] = v[1]
+    metrics_output.update(max_min_dict)
     df = pd.DataFrame(metrics_output, index=[0])
     output_path = os.path.join(output_dir, "total.csv")
     df.to_csv(output_path)
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.max_rows", None)
     print(df)
     
 def using_thresh(data_folder, output_dir, thresh=0.0817678607279089):

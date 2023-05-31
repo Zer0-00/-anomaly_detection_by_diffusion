@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset,DataLoader,SubsetRandomSampler
 import os
 from torchvision import transforms as T
 import torch
@@ -14,6 +14,7 @@ def load_data(
     class_labels=True,
     test=False,
     limited_num=None,
+    data_num=-1,
 ):
     """
     For a dataset, create a generator over (images, kwargs) pairs.
@@ -28,23 +29,31 @@ def load_data(
     :param deterministic: if True, yield results in a deterministic order.
     :param test: if True, yield results from test set
     :param limited_num: if None, yield unlimited number of samples, else yield limited_num * batch_size samples, if <= 0, yield len(Dataset) sanmples
+    :param data_num: if <= 0, yield from all samples, others yield from specific data_num samples
     """
     
     if dataset.lower() == "brats2020":
         dataset = Brats2020(
             data_dir=data_dir,
             test=test,
-            class_labels=class_labels
+            class_labels=class_labels,
         )
     
-    if deterministic:
-        loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True
-        )
+    if data_num > 0:
+        indice = list(np.random.randint(len(dataset)),size=data_num)
+        sampler = SubsetRandomSampler(indice)
     else:
-        loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True
-        )
+        sampler=None
+    
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size, 
+        shuffle=(not deterministic), 
+        num_workers=1, 
+        drop_last=True, 
+        sampler=sampler,
+    )
+
     if limited_num is None:
         while True:
             yield from loader
@@ -246,6 +255,7 @@ class Brats2020(Dataset):
         
         if self.classes_included == 'anomaly':
             image_files = os.listdir(os.path.join(self.image_folder, self.class_names[1]))
+            
             self.image_dirs = [os.path.join(self.image_folder, self.class_names[1], image_file) for image_file in image_files]
             if self.process_seg:
                 self.segmentation_files = [[os.path.join(self.segmentation_folder, self.class_names[1],self._find_seg(image_file)) for image_file in image_files]]
@@ -272,6 +282,7 @@ class Brats2020(Dataset):
             self.seg_transforms = T.Compose([])
         else:
             self.seg_transforms = seg_trans
+
             
             
     def __len__(self):

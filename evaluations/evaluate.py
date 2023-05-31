@@ -100,10 +100,12 @@ def evaluate_image(image_path, save_dir):
     plt.title('segmentation')
     plt.subplot(4,4,16)
     plt.imshow((pred * pred_seg).squeeze(), cmap='Spectral_r', vmin=0.0, vmax=1.0)
+    plt.colorbar()
     #plt.imshow(img.squeeze().astype(np.uint), cmap='gray', alpha=0.5)
     plt.axis('off')
     plt.title('image+segmentation')
     plt.savefig(save_dir)
+    print("threshold:", thresh)
     plt.close
     
 def evaluate_z(data_path, output_path):

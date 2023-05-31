@@ -11,7 +11,7 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch.optim import Adam
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
-import tqdm
+import matplotlib.pyplot as plt
 
 from guided_diffusion import dist_util, logger
 from guided_diffusion.dataset import load_data
@@ -155,12 +155,16 @@ def main():
         limited_num=-1
     )
     lgs_healthy = find_lgs(model, classifier, data, z_mean, z_std, 0)
-    lgs_healthy = np.concatenate(lgs_healthy, axis=0).mean(axis=0)
-    
+    lgs_healthy = np.concatenate(lgs_healthy, axis=0)
+
     if dist.get_rank() == 0:
         logger.log("saving model...")
-        save_model(mp_trainer, opt, step)
+        save_model(mp_trainer, opt, step + 1)
+        plt.hist(lgs_healthy)
+        plt.savefig(os.path.join(logger.get_dir(), "lgs_hist"))
+        plt.close()
         save_dir = os.path.join(logger.get_dir(), 'median_logist')
+        lgs_healthy = lgs_healthy.mean(axis=0)
         np.savez(save_dir, lgs_healthy=lgs_healthy)
 
     dist.barrier()

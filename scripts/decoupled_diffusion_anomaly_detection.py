@@ -66,9 +66,9 @@ def main():
     if args.shifting_z:
         def shiftingZ(z:th.Tensor):
             z = (z - z_mean)/z_std
-            s = (median - b - th.mm(z, w.transpose(0,1)))/(th.mm(w,(w.transpose(0,1))))
-            z = z + s*w
-            
+            #s = (median - b - th.mm(z, w.transpose(0,1)))/(th.mm(w,(w.transpose(0,1))))
+            s = (args.anomaly_score - b - th.mm(z, w.transpose(0,1)))/(th.mm(w,(w.transpose(0,1))))
+            z = z + s * w
             z = z * z_std + z_mean
 
             return z
@@ -156,6 +156,7 @@ def create_argparser():
         median_path="",
         random_seed=1126,
         shifting_z=False,
+        anomaly_score=-3,
         calcu_thresh=False,
     )
     defaults.update(decoupled_diffusion_and_diffusion_defaults())
